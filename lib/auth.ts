@@ -29,9 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async session({ session, token }) {
-      // Adiciona o ID do Discord à sessão
-      if (token.sub) {
-        session.user.discordId = token.sub;
+      if (token.sub && session.user) {
+        (session.user as any).discordId = token.sub;
       }
       return session;
     },
