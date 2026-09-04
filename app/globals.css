@@ -308,13 +308,35 @@ button {
   height: 100%;
 }
 
+/* O compartilhamento usa o botão configurável abaixo, não o botão padrão. */
+.conference-stage .lk-control-bar [data-lk-source="screen_share"] {
+  display: none;
+}
+
+.conference-stage.has-screen-share .lk-focus-layout-wrapper,
+.conference-stage.has-screen-share .lk-grid-layout-wrapper {
+  height: 100%;
+}
+
+.conference-stage.has-screen-share .lk-control-bar {
+  position: absolute;
+  z-index: 18;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-top: 0;
+  background: linear-gradient(to top, rgba(8, 9, 24, 0.98), transparent);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
 .conference-tools {
   position: absolute;
   z-index: 20;
-  top: max(14px, env(safe-area-inset-top));
   right: max(14px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
   display: flex;
   gap: 8px;
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
 .conference-tool-button {
@@ -371,13 +393,66 @@ button {
   stroke-linejoin: round;
 }
 
+.conference-share-button.is-sharing {
+  border-color: rgba(255, 122, 122, 0.6);
+  color: #ffd2d2;
+}
+
+.conference-stage.has-screen-share.controls-hidden {
+  cursor: none;
+}
+
+.conference-stage.has-screen-share.controls-hidden .conference-tools,
+.conference-stage.has-screen-share.controls-hidden .lk-control-bar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+}
+
+.conference-stage.has-screen-share.controls-hidden .lk-focus-toggle-button {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.conference-stage.has-screen-share.controls-hidden:focus-within {
+  cursor: auto;
+}
+
+.conference-stage.has-screen-share.controls-hidden:focus-within .conference-tools,
+.conference-stage.has-screen-share.controls-hidden:focus-within .lk-control-bar {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.fullscreen-screen-share {
+  position: absolute;
+  z-index: 15;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+}
+
+.fullscreen-screen-share-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.conference-stage.is-screen-fullscreen .lk-control-bar {
+  display: none;
+}
+
 .audio-mixer {
   position: absolute;
   z-index: 21;
-  top: max(66px, calc(env(safe-area-inset-top) + 58px));
   right: max(14px, env(safe-area-inset-right));
+  bottom: max(68px, calc(env(safe-area-inset-bottom) + 58px));
   width: min(360px, calc(100vw - 28px));
-  max-height: calc(100% - 146px);
+  max-height: calc(100% - 96px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -555,8 +630,8 @@ button {
 .fullscreen-error {
   position: absolute;
   z-index: 22;
-  top: max(68px, calc(env(safe-area-inset-top) + 60px));
   right: max(14px, env(safe-area-inset-right));
+  bottom: max(68px, calc(env(safe-area-inset-bottom) + 58px));
   width: min(340px, calc(100vw - 28px));
   margin: 0;
   padding: 10px 12px;
@@ -568,7 +643,121 @@ button {
   line-height: 1.45;
 }
 
-@media (max-width: 560px) {
+.quality-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.quality-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.quality-fieldset legend {
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.quality-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.quality-options-fps {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quality-option {
+  min-height: 39px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(18, 20, 43, 0.72);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease,
+    color 0.15s ease;
+}
+
+.quality-option:hover {
+  border-color: rgba(245, 166, 35, 0.55);
+  color: var(--text);
+}
+
+.quality-option.is-selected {
+  border-color: var(--accent);
+  background: rgba(245, 166, 35, 0.14);
+  color: var(--accent-strong);
+}
+
+.quality-option:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.quality-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid rgba(245, 166, 35, 0.28);
+  border-radius: 10px;
+  background: rgba(245, 166, 35, 0.08);
+}
+
+.quality-summary strong {
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+.quality-summary span,
+.echo-protection-note,
+.quality-status,
+.quality-error {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.quality-summary span,
+.echo-protection-note {
+  color: var(--text-muted);
+}
+
+.echo-protection-note,
+.quality-status,
+.quality-error {
+  margin: 0;
+}
+
+.echo-protection-note {
+  padding-left: 11px;
+  border-left: 2px solid var(--border);
+}
+
+.echo-protection-note.is-warning {
+  border-left-color: var(--danger);
+  color: #ffd0d0;
+}
+
+.quality-status {
+  color: #9ce8b1;
+}
+
+.quality-error {
+  color: #ffd0d0;
+}
+
+@media (max-width: 1450px) {
   .conference-tool-button {
     width: 42px;
     padding: 0;
@@ -582,8 +771,24 @@ button {
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
+}
+
+@media (max-width: 640px) {
+  .conference-tools {
+    bottom: max(76px, calc(env(safe-area-inset-bottom) + 68px));
+  }
+
+  .conference-stage.is-screen-fullscreen .conference-tools {
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
 
   .audio-mixer {
-    max-height: calc(100% - 136px);
+    bottom: max(128px, calc(env(safe-area-inset-bottom) + 118px));
+    max-height: calc(100% - 152px);
+  }
+
+  .conference-stage.is-screen-fullscreen .audio-mixer {
+    bottom: max(68px, calc(env(safe-area-inset-bottom) + 58px));
+    max-height: calc(100% - 96px);
   }
 }

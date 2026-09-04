@@ -105,6 +105,20 @@ O segredo contém expiração e nonce assinados com HMAC. Isso permite validar o
 mesmo convite em qualquer instância serverless da Vercel sem guardar salas em
 memória. Os convites expiram depois de 24 horas.
 
+## Controles da transmissão
+
+- O menu **Áudio** controla separadamente a voz e o compartilhamento de cada
+  participante. Todas as trilhas começam em 100%.
+- O menu **Qualidade** permite transmitir em 480p, 720p ou 1080p, com 15 ou 30
+  FPS. O padrão é 1080p a 30 FPS.
+- **Tela cheia** mostra somente a transmissão ativa. Os controles desaparecem
+  após alguns segundos sem movimento e reaparecem ao mover o mouse ou tocar na
+  tela.
+- Em navegadores compatíveis, o compartilhamento solicita `restrictOwnAudio`
+  para retirar da captura as vozes reproduzidas pelo próprio Tela Direta. Em
+  navegadores sem esse recurso, use fones de ouvido para impedir retorno de
+  áudio.
+
 ## Erros comuns
 
 - **`NextAuth is not callable`:** havia um arquivo `next-auth.d.ts` na raiz
