@@ -118,3 +118,8 @@ memória. Os convites expiram depois de 24 horas.
 - **`MissingSecret`:** `AUTH_SECRET` não foi configurado na Vercel.
 - **`Link inválido ou expirado`:** convite expirado, assinatura alterada ou
   `ROOM_SIGNING_SECRET`/`AUTH_SECRET` foi trocado depois da criação do link.
+- **O Windows abaixa o som compartilhado durante a chamada:** abra
+  **Configurações > Sistema > Som > Mais configurações de som > Comunicações**,
+  marque **Não fazer nada** e aplique. Esse ajuste é do sistema operacional e
+  não pode ser sobrescrito pelo navegador. Usar fones também evita que a voz da
+  chamada volte para a transmissão como eco.

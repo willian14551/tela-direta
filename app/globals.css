@@ -285,3 +285,305 @@ button {
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/* ---------- controles da conferência ---------- */
+
+.conference-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.conference-stage:fullscreen,
+.conference-stage:-webkit-full-screen {
+  width: 100vw;
+  height: 100dvh;
+  background: var(--bg);
+}
+
+.conference-stage > .lk-video-conference {
+  height: 100%;
+}
+
+.conference-tools {
+  position: absolute;
+  z-index: 20;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+}
+
+.conference-tool-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 10px;
+  background: rgba(18, 20, 43, 0.9);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.08s ease;
+}
+
+.conference-tool-button:hover:not(:disabled),
+.conference-tool-button.is-active {
+  border-color: var(--accent);
+  background: rgba(36, 39, 81, 0.96);
+}
+
+.conference-tool-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.conference-tool-button:focus-visible,
+.volume-mute-button:focus-visible,
+.audio-mixer-close:focus-visible,
+.volume-control-inputs input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.conference-tool-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.conference-tool-button svg,
+.volume-mute-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.audio-mixer {
+  position: absolute;
+  z-index: 21;
+  top: max(66px, calc(env(safe-area-inset-top) + 58px));
+  right: max(14px, env(safe-area-inset-right));
+  width: min(360px, calc(100vw - 28px));
+  max-height: calc(100% - 146px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(27, 30, 60, 0.98);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(16px);
+}
+
+.audio-mixer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 17px 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.audio-mixer-header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.audio-mixer-header p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.audio-mixer-close {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.audio-mixer-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.audio-mixer-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 14px 14px;
+}
+
+.audio-mixer-empty {
+  margin: 14px 2px 2px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.participant-volume {
+  padding: 14px 2px;
+  border-bottom: 1px solid rgba(51, 54, 106, 0.72);
+}
+
+.participant-volume:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+
+.participant-volume-name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.participant-volume-name strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.participant-volume-avatar {
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.volume-control + .volume-control {
+  margin-top: 11px;
+}
+
+.volume-control-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 1px 6px 39px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.volume-control-label output {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-control-inputs {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.volume-mute-button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.volume-mute-button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.volume-mute-button.is-muted {
+  color: var(--danger);
+}
+
+.volume-control-inputs input[type="range"] {
+  width: 100%;
+  height: 5px;
+  appearance: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.volume-control-inputs input[type="range"]::-webkit-slider-thumb {
+  width: 15px;
+  height: 15px;
+  appearance: none;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent-strong);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+}
+
+.volume-control-inputs input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent-strong);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+}
+
+.fullscreen-error {
+  position: absolute;
+  z-index: 22;
+  top: max(68px, calc(env(safe-area-inset-top) + 60px));
+  right: max(14px, env(safe-area-inset-right));
+  width: min(340px, calc(100vw - 28px));
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 122, 122, 0.45);
+  border-radius: 9px;
+  background: rgba(55, 25, 42, 0.96);
+  color: #ffd4d4;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+  .conference-tool-button {
+    width: 42px;
+    padding: 0;
+  }
+
+  .conference-tool-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .audio-mixer {
+    max-height: calc(100% - 136px);
+  }
+}

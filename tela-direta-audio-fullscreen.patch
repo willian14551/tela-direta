@@ -1,0 +1,723 @@
+diff --git a/README.md b/README.md
+index c2abe37..f05bb18 100644
+--- a/README.md
++++ b/README.md
+@@ -118,3 +118,8 @@ memória. Os convites expiram depois de 24 horas.
+ - **`MissingSecret`:** `AUTH_SECRET` não foi configurado na Vercel.
+ - **`Link inválido ou expirado`:** convite expirado, assinatura alterada ou
+   `ROOM_SIGNING_SECRET`/`AUTH_SECRET` foi trocado depois da criação do link.
++- **O Windows abaixa o som compartilhado durante a chamada:** abra
++  **Configurações > Sistema > Som > Mais configurações de som > Comunicações**,
++  marque **Não fazer nada** e aplique. Esse ajuste é do sistema operacional e
++  não pode ser sobrescrito pelo navegador. Usar fones também evita que a voz da
++  chamada volte para a transmissão como eco.
+diff --git a/app/globals.css b/app/globals.css
+index 560e9e4..ae8582d 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -285,3 +285,305 @@ button {
+   color: var(--text-muted);
+   font-size: 14px;
+ }
++
++/* ---------- controles da conferência ---------- */
++
++.conference-stage {
++  position: relative;
++  width: 100%;
++  height: 100%;
++  min-height: 0;
++  overflow: hidden;
++  background: var(--bg);
++}
++
++.conference-stage:fullscreen,
++.conference-stage:-webkit-full-screen {
++  width: 100vw;
++  height: 100dvh;
++  background: var(--bg);
++}
++
++.conference-stage > .lk-video-conference {
++  height: 100%;
++}
++
++.conference-tools {
++  position: absolute;
++  z-index: 20;
++  top: max(14px, env(safe-area-inset-top));
++  right: max(14px, env(safe-area-inset-right));
++  display: flex;
++  gap: 8px;
++}
++
++.conference-tool-button {
++  min-height: 42px;
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  padding: 0 13px;
++  border: 1px solid rgba(255, 255, 255, 0.17);
++  border-radius: 10px;
++  background: rgba(18, 20, 43, 0.9);
++  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
++  color: var(--text);
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++  backdrop-filter: blur(10px);
++  transition: background 0.15s ease, border-color 0.15s ease,
++    transform 0.08s ease;
++}
++
++.conference-tool-button:hover:not(:disabled),
++.conference-tool-button.is-active {
++  border-color: var(--accent);
++  background: rgba(36, 39, 81, 0.96);
++}
++
++.conference-tool-button:active:not(:disabled) {
++  transform: scale(0.97);
++}
++
++.conference-tool-button:focus-visible,
++.volume-mute-button:focus-visible,
++.audio-mixer-close:focus-visible,
++.volume-control-inputs input:focus-visible {
++  outline: 2px solid var(--accent-strong);
++  outline-offset: 2px;
++}
++
++.conference-tool-button:disabled {
++  opacity: 0.45;
++  cursor: not-allowed;
++}
++
++.conference-tool-button svg,
++.volume-mute-button svg {
++  width: 19px;
++  height: 19px;
++  fill: none;
++  stroke: currentColor;
++  stroke-width: 1.8;
++  stroke-linecap: round;
++  stroke-linejoin: round;
++}
++
++.audio-mixer {
++  position: absolute;
++  z-index: 21;
++  top: max(66px, calc(env(safe-area-inset-top) + 58px));
++  right: max(14px, env(safe-area-inset-right));
++  width: min(360px, calc(100vw - 28px));
++  max-height: calc(100% - 146px);
++  display: flex;
++  flex-direction: column;
++  overflow: hidden;
++  border: 1px solid rgba(255, 255, 255, 0.16);
++  border-radius: 14px;
++  background: rgba(27, 30, 60, 0.98);
++  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
++  backdrop-filter: blur(16px);
++}
++
++.audio-mixer-header {
++  display: flex;
++  align-items: flex-start;
++  justify-content: space-between;
++  gap: 12px;
++  padding: 17px 17px 13px;
++  border-bottom: 1px solid var(--border);
++}
++
++.audio-mixer-header h2 {
++  margin: 0;
++  font-size: 16px;
++  line-height: 1.3;
++}
++
++.audio-mixer-header p {
++  margin: 3px 0 0;
++  color: var(--text-muted);
++  font-size: 12px;
++}
++
++.audio-mixer-close {
++  width: 30px;
++  height: 30px;
++  flex: 0 0 auto;
++  border: 0;
++  border-radius: 8px;
++  background: transparent;
++  color: var(--text-muted);
++  font-size: 24px;
++  line-height: 1;
++  cursor: pointer;
++}
++
++.audio-mixer-close:hover {
++  background: var(--surface-2);
++  color: var(--text);
++}
++
++.audio-mixer-list {
++  overflow-y: auto;
++  overscroll-behavior: contain;
++  padding: 4px 14px 14px;
++}
++
++.audio-mixer-empty {
++  margin: 14px 2px 2px;
++  color: var(--text-muted);
++  font-size: 13px;
++  line-height: 1.5;
++}
++
++.participant-volume {
++  padding: 14px 2px;
++  border-bottom: 1px solid rgba(51, 54, 106, 0.72);
++}
++
++.participant-volume:last-child {
++  border-bottom: 0;
++  padding-bottom: 2px;
++}
++
++.participant-volume-name {
++  min-width: 0;
++  display: flex;
++  align-items: center;
++  gap: 9px;
++  margin-bottom: 12px;
++}
++
++.participant-volume-name strong {
++  overflow: hidden;
++  font-size: 14px;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.participant-volume-avatar {
++  width: 29px;
++  height: 29px;
++  flex: 0 0 auto;
++  display: inline-grid;
++  place-items: center;
++  border-radius: 50%;
++  background: var(--surface-2);
++  color: var(--accent-strong);
++  font-size: 12px;
++  font-weight: 700;
++}
++
++.volume-control + .volume-control {
++  margin-top: 11px;
++}
++
++.volume-control-label {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  margin: 0 1px 6px 39px;
++  color: var(--text-muted);
++  font-size: 11px;
++}
++
++.volume-control-label output {
++  color: var(--text);
++  font-variant-numeric: tabular-nums;
++}
++
++.volume-control-inputs {
++  display: flex;
++  align-items: center;
++  gap: 9px;
++}
++
++.volume-mute-button {
++  width: 30px;
++  height: 30px;
++  flex: 0 0 auto;
++  display: inline-grid;
++  place-items: center;
++  padding: 0;
++  border: 0;
++  border-radius: 8px;
++  background: transparent;
++  color: var(--text-muted);
++  cursor: pointer;
++}
++
++.volume-mute-button:hover {
++  background: var(--surface-2);
++  color: var(--text);
++}
++
++.volume-mute-button.is-muted {
++  color: var(--danger);
++}
++
++.volume-control-inputs input[type="range"] {
++  width: 100%;
++  height: 5px;
++  appearance: none;
++  border-radius: 999px;
++  cursor: pointer;
++}
++
++.volume-control-inputs input[type="range"]::-webkit-slider-thumb {
++  width: 15px;
++  height: 15px;
++  appearance: none;
++  border: 2px solid var(--surface);
++  border-radius: 50%;
++  background: var(--accent-strong);
++  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
++}
++
++.volume-control-inputs input[type="range"]::-moz-range-thumb {
++  width: 12px;
++  height: 12px;
++  border: 2px solid var(--surface);
++  border-radius: 50%;
++  background: var(--accent-strong);
++  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
++}
++
++.fullscreen-error {
++  position: absolute;
++  z-index: 22;
++  top: max(68px, calc(env(safe-area-inset-top) + 60px));
++  right: max(14px, env(safe-area-inset-right));
++  width: min(340px, calc(100vw - 28px));
++  margin: 0;
++  padding: 10px 12px;
++  border: 1px solid rgba(255, 122, 122, 0.45);
++  border-radius: 9px;
++  background: rgba(55, 25, 42, 0.96);
++  color: #ffd4d4;
++  font-size: 12px;
++  line-height: 1.45;
++}
++
++@media (max-width: 560px) {
++  .conference-tool-button {
++    width: 42px;
++    padding: 0;
++  }
++
++  .conference-tool-button span {
++    position: absolute;
++    width: 1px;
++    height: 1px;
++    overflow: hidden;
++    clip: rect(0 0 0 0);
++    white-space: nowrap;
++  }
++
++  .audio-mixer {
++    max-height: calc(100% - 136px);
++  }
++}
+diff --git a/app/room/[roomId]/RoomClient.tsx b/app/room/[roomId]/RoomClient.tsx
+index 7ecbac0..5c645e6 100644
+--- a/app/room/[roomId]/RoomClient.tsx
++++ b/app/room/[roomId]/RoomClient.tsx
+@@ -1,13 +1,378 @@
+ "use client";
+-import { useEffect, useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { useSession } from "next-auth/react";
+ import {
+   LiveKitRoom,
+   VideoConference,
+-  RoomAudioRenderer,
++  useRemoteParticipants,
+ } from "@livekit/components-react";
++import { Track, type RemoteParticipant } from "livekit-client";
+ 
+ type ConnInfo = { token: string; livekitUrl: string };
++type AudioSource =
++  | Track.Source.Microphone
++  | Track.Source.ScreenShareAudio;
++
++type SafariFullscreenElement = HTMLElement & {
++  webkitRequestFullscreen?: () => Promise<void> | void;
++};
++
++type SafariFullscreenDocument = Document & {
++  webkitExitFullscreen?: () => Promise<void> | void;
++  webkitFullscreenElement?: Element | null;
++  webkitFullscreenEnabled?: boolean;
++};
++
++function getFullscreenElement(doc: SafariFullscreenDocument) {
++  return doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
++}
++
++function getVolumeKey(participant: RemoteParticipant, source: AudioSource) {
++  return `${participant.identity}:${source}`;
++}
++
++function SpeakerIcon({ muted }: { muted: boolean }) {
++  return muted ? (
++    <svg viewBox="0 0 24 24" aria-hidden="true">
++      <path d="M11 5 6.5 9H3v6h3.5L11 19V5Zm4.5 5.5 5 5m0-5-5 5" />
++    </svg>
++  ) : (
++    <svg viewBox="0 0 24 24" aria-hidden="true">
++      <path d="M11 5 6.5 9H3v6h3.5L11 19V5Zm4 4a4.25 4.25 0 0 1 0 6m2.75-8.75a8 8 0 0 1 0 11.5" />
++    </svg>
++  );
++}
++
++function MixerIcon() {
++  return (
++    <svg viewBox="0 0 24 24" aria-hidden="true">
++      <path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M10 14v6" />
++    </svg>
++  );
++}
++
++function FullscreenIcon({ active }: { active: boolean }) {
++  return active ? (
++    <svg viewBox="0 0 24 24" aria-hidden="true">
++      <path d="M9 4v5H4m11-5v5h5M9 20v-5H4m11 5v-5h5" />
++    </svg>
++  ) : (
++    <svg viewBox="0 0 24 24" aria-hidden="true">
++      <path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5" />
++    </svg>
++  );
++}
++
++function VolumeControl({
++  participant,
++  source,
++  label,
++  value,
++  onChange,
++  onToggleMute,
++}: {
++  participant: RemoteParticipant;
++  source: AudioSource;
++  label: string;
++  value: number;
++  onChange: (value: number) => void;
++  onToggleMute: () => void;
++}) {
++  const participantName = participant.name || participant.identity;
++  const muted = value === 0;
++
++  return (
++    <div className="volume-control">
++      <div className="volume-control-label">
++        <span>{label}</span>
++        <output aria-live="off">{value}%</output>
++      </div>
++      <div className="volume-control-inputs">
++        <button
++          type="button"
++          className={`volume-mute-button${muted ? " is-muted" : ""}`}
++          onClick={onToggleMute}
++          aria-label={`${muted ? "Ativar" : "Silenciar"} ${label.toLowerCase()} de ${participantName}`}
++          aria-pressed={muted}
++        >
++          <SpeakerIcon muted={muted} />
++        </button>
++        <input
++          type="range"
++          min="0"
++          max="100"
++          step="1"
++          value={value}
++          onChange={(event) => onChange(Number(event.currentTarget.value))}
++          aria-label={`Volume de ${label.toLowerCase()} de ${participantName}`}
++          style={{
++            background: `linear-gradient(to right, var(--accent) ${value}%, var(--border) ${value}%)`,
++          }}
++        />
++      </div>
++    </div>
++  );
++}
++
++function ConferenceExperience() {
++  const participants = useRemoteParticipants();
++  const stageRef = useRef<HTMLDivElement>(null);
++  const lastAudibleVolumes = useRef<Record<string, number>>({});
++  const [volumes, setVolumes] = useState<Record<string, number>>({});
++  const [isMixerOpen, setIsMixerOpen] = useState(false);
++  const [isFullscreen, setIsFullscreen] = useState(false);
++  const [fullscreenSupported, setFullscreenSupported] = useState(true);
++  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
++
++  useEffect(() => {
++    const doc = document as SafariFullscreenDocument;
++    const handleFullscreenChange = () => {
++      setIsFullscreen(getFullscreenElement(doc) === stageRef.current);
++    };
++
++    setFullscreenSupported(
++      Boolean(doc.fullscreenEnabled || doc.webkitFullscreenEnabled),
++    );
++    handleFullscreenChange();
++    document.addEventListener("fullscreenchange", handleFullscreenChange);
++    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
++
++    return () => {
++      document.removeEventListener("fullscreenchange", handleFullscreenChange);
++      document.removeEventListener(
++        "webkitfullscreenchange",
++        handleFullscreenChange,
++      );
++    };
++  }, []);
++
++  useEffect(() => {
++    participants.forEach((participant) => {
++      const microphoneKey = getVolumeKey(
++        participant,
++        Track.Source.Microphone,
++      );
++      const screenKey = getVolumeKey(
++        participant,
++        Track.Source.ScreenShareAudio,
++      );
++
++      if (volumes[microphoneKey] !== undefined) {
++        participant.setVolume(
++          volumes[microphoneKey] / 100,
++          Track.Source.Microphone,
++        );
++      }
++      if (volumes[screenKey] !== undefined) {
++        participant.setVolume(
++          volumes[screenKey] / 100,
++          Track.Source.ScreenShareAudio,
++        );
++      }
++    });
++  }, [participants, volumes]);
++
++  function currentVolume(participant: RemoteParticipant, source: AudioSource) {
++    const key = getVolumeKey(participant, source);
++    const savedVolume = volumes[key];
++
++    if (savedVolume !== undefined) return savedVolume;
++    return Math.round((participant.getVolume(source) ?? 1) * 100);
++  }
++
++  function updateVolume(
++    participant: RemoteParticipant,
++    source: AudioSource,
++    value: number,
++  ) {
++    const key = getVolumeKey(participant, source);
++    const nextVolume = Math.max(0, Math.min(100, value));
++
++    if (nextVolume > 0) {
++      lastAudibleVolumes.current[key] = nextVolume;
++    }
++    participant.setVolume(nextVolume / 100, source);
++    setVolumes((current) => ({ ...current, [key]: nextVolume }));
++  }
++
++  function toggleMute(participant: RemoteParticipant, source: AudioSource) {
++    const key = getVolumeKey(participant, source);
++    const volume = currentVolume(participant, source);
++    updateVolume(
++      participant,
++      source,
++      volume === 0 ? (lastAudibleVolumes.current[key] ?? 100) : 0,
++    );
++  }
++
++  async function toggleFullscreen() {
++    const target = stageRef.current as SafariFullscreenElement | null;
++    const doc = document as SafariFullscreenDocument;
++    if (!target) return;
++
++    setFullscreenError(null);
++    try {
++      if (getFullscreenElement(doc)) {
++        if (document.exitFullscreen) {
++          await document.exitFullscreen();
++        } else {
++          await doc.webkitExitFullscreen?.();
++        }
++      } else if (target.requestFullscreen) {
++        await target.requestFullscreen({ navigationUI: "hide" });
++      } else if (target.webkitRequestFullscreen) {
++        await target.webkitRequestFullscreen();
++      } else {
++        throw new Error("Fullscreen API indisponível");
++      }
++    } catch {
++      setFullscreenError(
++        "O navegador bloqueou a tela cheia. Tente novamente ou pressione F11.",
++      );
++    }
++  }
++
++  return (
++    <div ref={stageRef} className="conference-stage">
++      <VideoConference />
++
++      <div className="conference-tools" aria-label="Controles da sala">
++        <button
++          type="button"
++          className={`conference-tool-button${isMixerOpen ? " is-active" : ""}`}
++          onClick={() => setIsMixerOpen((open) => !open)}
++          aria-expanded={isMixerOpen}
++          aria-controls="audio-mixer"
++          title="Volumes individuais"
++        >
++          <MixerIcon />
++          <span>Áudio</span>
++        </button>
++        <button
++          type="button"
++          className="conference-tool-button"
++          onClick={toggleFullscreen}
++          disabled={!fullscreenSupported}
++          title={
++            fullscreenSupported
++              ? isFullscreen
++                ? "Sair da tela cheia"
++                : "Entrar em tela cheia"
++              : "Tela cheia não disponível neste navegador"
++          }
++        >
++          <FullscreenIcon active={isFullscreen} />
++          <span>{isFullscreen ? "Sair" : "Tela cheia"}</span>
++        </button>
++      </div>
++
++      {isMixerOpen && (
++        <aside
++          id="audio-mixer"
++          className="audio-mixer"
++          role="dialog"
++          aria-label="Volumes individuais"
++        >
++          <div className="audio-mixer-header">
++            <div>
++              <h2>Volumes individuais</h2>
++              <p>Só altera o que você escuta.</p>
++            </div>
++            <button
++              type="button"
++              className="audio-mixer-close"
++              onClick={() => setIsMixerOpen(false)}
++              aria-label="Fechar controles de áudio"
++            >
++              ×
++            </button>
++          </div>
++
++          <div className="audio-mixer-list">
++            {participants.length === 0 ? (
++              <p className="audio-mixer-empty">
++                Os controles aparecerão quando outra pessoa entrar.
++              </p>
++            ) : (
++              participants.map((participant) => {
++                const participantName =
++                  participant.name || participant.identity;
++                const hasScreenAudio = Boolean(
++                  participant.getTrackPublication(
++                    Track.Source.ScreenShareAudio,
++                  ),
++                );
++
++                return (
++                  <section
++                    key={participant.identity}
++                    className="participant-volume"
++                  >
++                    <div className="participant-volume-name">
++                      <span className="participant-volume-avatar" aria-hidden="true">
++                        {participantName.trim().charAt(0).toUpperCase() || "?"}
++                      </span>
++                      <strong title={participantName}>{participantName}</strong>
++                    </div>
++                    <VolumeControl
++                      participant={participant}
++                      source={Track.Source.Microphone}
++                      label="Voz"
++                      value={currentVolume(
++                        participant,
++                        Track.Source.Microphone,
++                      )}
++                      onChange={(value) =>
++                        updateVolume(
++                          participant,
++                          Track.Source.Microphone,
++                          value,
++                        )
++                      }
++                      onToggleMute={() =>
++                        toggleMute(participant, Track.Source.Microphone)
++                      }
++                    />
++                    {hasScreenAudio && (
++                      <VolumeControl
++                        participant={participant}
++                        source={Track.Source.ScreenShareAudio}
++                        label="Transmissão"
++                        value={currentVolume(
++                          participant,
++                          Track.Source.ScreenShareAudio,
++                        )}
++                        onChange={(value) =>
++                          updateVolume(
++                            participant,
++                            Track.Source.ScreenShareAudio,
++                            value,
++                          )
++                        }
++                        onToggleMute={() =>
++                          toggleMute(
++                            participant,
++                            Track.Source.ScreenShareAudio,
++                          )
++                        }
++                      />
++                    )}
++                  </section>
++                );
++              })
++            )}
++          </div>
++        </aside>
++      )}
++
++      {fullscreenError && (
++        <p className="fullscreen-error" role="status">
++          {fullscreenError}
++        </p>
++      )}
++    </div>
++  );
++}
+ 
+ export default function RoomClient({ roomId }: { roomId: string }) {
+   const { data: session, status } = useSession();
+@@ -128,12 +493,12 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+           connect
+           video={false}
+           audio={false}
++          options={{ webAudioMix: true }}
+           data-lk-theme="default"
+           style={{ height: "100dvh" }}
+           onDisconnected={() => setConn(null)}
+         >
+-          <VideoConference />
+-          <RoomAudioRenderer />
++          <ConferenceExperience />
+         </LiveKitRoom>
+       </div>
+     );
