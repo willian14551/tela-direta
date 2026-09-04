@@ -1,12 +1,38 @@
 "use client";
+
+import { Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
-export default function SignIn() {
+function SignInForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const error = searchParams.get("error");
 
+  return (
+    <div className="panel">
+      <button
+        className="btn btn-primary"
+        onClick={() => signIn("discord", { callbackUrl })}
+      >
+        Entrar com Discord
+      </button>
+      {error && (
+        <p className="error-text">
+          {error === "AccessDenied"
+            ? "Você não é membro do servidor autorizado."
+            : "Erro ao fazer login. Tente novamente."}
+        </p>
+      )}
+      <p className="hint">
+        <strong>Importante:</strong> você precisa estar no servidor do
+        Discord para conseguir entrar. Se não for membro, peça um convite.
+      </p>
+    </div>
+  );
+}
+
+export default function SignInPage() {
   return (
     <div className="page">
       <header className="top-bar">
@@ -21,24 +47,9 @@ export default function SignIn() {
           Este site é exclusivo para membros do servidor do Discord.
           Faça login para continuar.
         </p>
-        <div className="panel">
-          <button
-            className="btn btn-primary"
-            onClick={() => signIn("discord", { callbackUrl })}
-          >
-            Entrar com Discord
-          </button>
-          {error && (
-            <p className="error-text">
-              {error === "AccessDenied"
-                ? "Você não é membro do servidor autorizado."
-                : "Erro ao fazer login. Tente novamente."}
-          )}
-          <p className="hint">
-            <strong>Importante:</strong> você precisa estar no servidor do
-            Discord para conseguir entrar. Se não for membro, peça um convite.
-          </p>
-        </div>
+        <Suspense fallback={<div className="panel"><p>Carregando...</p></div>}>
+          <SignInForm />
+        </Suspense>
       </main>
     </div>
   );
