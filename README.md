@@ -146,11 +146,11 @@ podem não exibir nome e avatar verificados até entrarem novamente.
 - **Tela cheia** mostra somente a transmissão ativa. Os controles desaparecem
   após alguns segundos sem movimento e reaparecem ao mover o mouse ou tocar na
   tela.
-- O áudio geral do computador é bloqueado ao compartilhar a tela inteira para
-  impedir que a conversa do Discord seja retransmitida. Para enviar o som do
-  jogo ou vídeo, compartilhe a janela ou aba específica e marque
-  **Compartilhar áudio**. Em navegadores compatíveis, `restrictOwnAudio`
-  também retira da captura o som reproduzido pelo próprio Tela Direta.
+- Ao compartilhar a tela inteira, o usuário pode enviar todo o áudio do
+  computador. Ao escolher uma janela no Chrome ou Edge 141+, o app solicita
+  `windowAudio: "window"` para capturar somente o som dela. Em navegadores que
+  não garantem esse isolamento, o áudio de janelas é removido antes de chegar
+  ao LiveKit; abas ainda compartilham apenas o próprio áudio.
 
 ## Erros comuns
 
