@@ -1,0 +1,27 @@
+{
+  "name": "tela-direta",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.6.7",
+    "@livekit/components-styles": "^1.1.4",
+    "livekit-client": "^2.7.4",
+    "livekit-server-sdk": "^2.9.2",
+    "nanoid": "^5.0.9",
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.2"
+  }
+}
