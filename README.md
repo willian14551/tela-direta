@@ -146,10 +146,11 @@ podem não exibir nome e avatar verificados até entrarem novamente.
 - **Tela cheia** mostra somente a transmissão ativa. Os controles desaparecem
   após alguns segundos sem movimento e reaparecem ao mover o mouse ou tocar na
   tela.
-- Em navegadores compatíveis, o compartilhamento solicita `restrictOwnAudio`
-  para retirar da captura as vozes reproduzidas pelo próprio Tela Direta. Em
-  navegadores sem esse recurso, use fones de ouvido para impedir retorno de
-  áudio.
+- O áudio geral do computador é bloqueado ao compartilhar a tela inteira para
+  impedir que a conversa do Discord seja retransmitida. Para enviar o som do
+  jogo ou vídeo, compartilhe a janela ou aba específica e marque
+  **Compartilhar áudio**. Em navegadores compatíveis, `restrictOwnAudio`
+  também retira da captura o som reproduzido pelo próprio Tela Direta.
 
 ## Erros comuns
 

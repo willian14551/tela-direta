@@ -19,6 +19,7 @@ import {
 } from "@livekit/components-react";
 import {
   AudioPresets,
+  ParticipantEvent,
   RoomEvent,
   ScreenSharePresets,
   Track,
@@ -205,6 +206,7 @@ export function ConferenceExperience() {
 
   const stageRef = useRef<HTMLDivElement>(null);
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const screenAudioRemovalInProgress = useRef(false);
   const lastAudibleVolumes = useRef<Record<string, number>>({});
   const [volumes, setVolumes] = useState<Record<string, number>>({});
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
@@ -215,6 +217,9 @@ export function ConferenceExperience() {
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
   const [fullscreenError, setFullscreenError] = useState<string | null>(null);
   const [screenShareError, setScreenShareError] = useState<string | null>(null);
+  const [screenShareStatus, setScreenShareStatus] = useState<string | null>(
+    null,
+  );
   const [qualityStatus, setQualityStatus] = useState<string | null>(null);
   const [qualityError, setQualityError] = useState<string | null>(null);
   const [echoProtectionSupported, setEchoProtectionSupported] = useState<
@@ -242,7 +247,9 @@ export function ConferenceExperience() {
       contentHint: frameRate === 30 ? "motion" : "detail",
       selfBrowserSurface: "exclude",
       surfaceSwitching: "include",
-      systemAudio: "include",
+      // A tela inteira mistura o som de todos os programas, incluindo Discord.
+      // Janela e aba continuam podendo oferecer o próprio áudio separadamente.
+      systemAudio: "exclude",
     }),
     [frameRate, selectedResolution],
   );
@@ -283,6 +290,82 @@ export function ConferenceExperience() {
       ),
     );
   }, []);
+
+  // systemAudio é uma preferência que navegadores podem ignorar. Como segunda
+  // barreira, removemos qualquer faixa de áudio publicada junto de um monitor.
+  // A captura de vídeo continua sendo a implementação nativa do LiveKit, que é
+  // mais compatível com jogos do que substituir getDisplayMedia manualmente.
+  useEffect(() => {
+    let disposed = false;
+
+    async function enforceScreenAudioSafety() {
+      const videoPublication = localParticipant.getTrackPublication(
+        Track.Source.ScreenShare,
+      );
+      const videoTrack = videoPublication?.track?.mediaStreamTrack;
+      if (!videoTrack) return;
+
+      const displaySurface = videoTrack.getSettings().displaySurface;
+      if (displaySurface === "window" || displaySurface === "browser") return;
+
+      if (!disposed) {
+        setScreenShareStatus(
+          displaySurface === "monitor"
+            ? "Tela inteira compartilhada sem áudio para impedir que o Discord seja retransmitido."
+            : "O navegador não identificou uma fonte de áudio isolada, então o som foi bloqueado por segurança.",
+        );
+      }
+
+      const audioPublication = localParticipant.getTrackPublication(
+        Track.Source.ScreenShareAudio,
+      );
+      const audioTrack = audioPublication?.track;
+      if (!audioTrack || screenAudioRemovalInProgress.current) return;
+
+      screenAudioRemovalInProgress.current = true;
+      try {
+        await localParticipant.unpublishTrack(audioTrack);
+      } finally {
+        audioTrack.stop();
+        screenAudioRemovalInProgress.current = false;
+      }
+    }
+
+    const handleLocalTrackPublished = () => {
+      void enforceScreenAudioSafety().catch(() => {
+        if (!disposed) {
+          setScreenShareError(
+            "Não foi possível bloquear o áudio geral do computador. Pare a transmissão e tente novamente.",
+          );
+        }
+      });
+    };
+
+    localParticipant.on(
+      ParticipantEvent.LocalTrackPublished,
+      handleLocalTrackPublished,
+    );
+    handleLocalTrackPublished();
+
+    return () => {
+      disposed = true;
+      localParticipant.off(
+        ParticipantEvent.LocalTrackPublished,
+        handleLocalTrackPublished,
+      );
+    };
+  }, [localParticipant]);
+
+  useEffect(() => {
+    if (!isScreenShareEnabled) {
+      setScreenShareStatus(null);
+      return;
+    }
+    if (!screenShareStatus) return;
+
+    const timer = setTimeout(() => setScreenShareStatus(null), 8_000);
+    return () => clearTimeout(timer);
+  }, [isScreenShareEnabled, screenShareStatus]);
 
   useEffect(() => {
     const doc = document as SafariFullscreenDocument;
@@ -718,9 +801,12 @@ export function ConferenceExperience() {
                 echoProtectionSupported === false ? " is-warning" : ""
               }`}
             >
-              {echoProtectionSupported === false
-                ? "Este navegador não oferece o filtro de eco da tela. Use fones para impedir o retorno das vozes."
-                : "Proteção contra retorno das vozes ativada para navegadores compatíveis."}
+              <strong>Proteção contra vazamento:</strong> a tela inteira é
+              transmitida sem áudio. Para enviar o som do jogo ou vídeo sem o
+              Discord, escolha a janela ou aba específica e marque
+              “Compartilhar áudio”.
+              {echoProtectionSupported === false &&
+                " Este navegador também não oferece o filtro do áudio reproduzido pelo próprio Tela Direta; use fones de ouvido."}
             </p>
             {isScreenShareEnabled && qualityStatus && (
               <p className="quality-status" role="status">
@@ -741,6 +827,14 @@ export function ConferenceExperience() {
           {fullscreenError || screenShareError}
         </p>
       )}
+      {screenShareStatus &&
+        !fullscreenError &&
+        !screenShareError &&
+        openPanel === null && (
+          <p className="screen-share-notice" role="status">
+            {screenShareStatus}
+          </p>
+        )}
     </div>
   );
 }

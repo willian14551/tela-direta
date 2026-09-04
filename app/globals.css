@@ -1307,6 +1307,23 @@ button {
   line-height: 1.45;
 }
 
+.screen-share-notice {
+  position: absolute;
+  z-index: 22;
+  left: 50%;
+  bottom: max(68px, calc(env(safe-area-inset-bottom) + 58px));
+  width: min(390px, calc(100vw - 28px));
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(111, 225, 148, 0.42);
+  border-radius: 9px;
+  background: rgba(18, 52, 43, 0.96);
+  color: #c8f7d6;
+  font-size: 12px;
+  line-height: 1.45;
+  transform: translateX(-50%);
+}
+
 .quality-panel-content {
   display: flex;
   flex-direction: column;
@@ -1406,6 +1423,10 @@ button {
 .echo-protection-note {
   padding-left: 11px;
   border-left: 2px solid var(--border);
+}
+
+.echo-protection-note strong {
+  color: var(--text);
 }
 
 .echo-protection-note.is-warning {
