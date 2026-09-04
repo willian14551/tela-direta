@@ -47,10 +47,11 @@ export async function mintParticipantToken(
     roomRecord: false,
   });
 
-  // Observação: por padrão o LiveKit Cloud já fecha salas vazias após um
-  // tempo. Para customizar esse prazo (empty_timeout) ou limite de
-  // participantes por sala, configure pelo dashboard do LiveKit Cloud ou
-  // crie a sala explicitamente antes via RoomServiceClient.
+  // A sala só passa a existir quando o primeiro participante entra. Pelo
+  // padrão do LiveKit, ela é encerrada 20 segundos após a saída do último
+  // participante (departure_timeout), dando tempo para uma reconexão breve.
+  // O convite pode recriar outra sala com o mesmo nome enquanto estiver
+  // válido, mas nenhuma mídia ou sala ativa permanece entre esses usos.
 
   const token = await at.toJwt();
   return { token, livekitUrl };

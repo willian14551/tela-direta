@@ -10,20 +10,26 @@ import {
 import {
   isTrackReference,
   TrackToggle,
+  useCreateLayoutContext,
   useLocalParticipant,
+  usePinnedTracks,
   useRemoteParticipants,
   useTracks,
-  VideoConference,
   VideoTrack,
 } from "@livekit/components-react";
 import {
   AudioPresets,
+  RoomEvent,
   ScreenSharePresets,
   Track,
   type RemoteParticipant,
   type ScreenShareCaptureOptions,
   type TrackPublishOptions,
 } from "livekit-client";
+import {
+  isSameTrackReference,
+  SyncedVideoConference,
+} from "@/components/SyncedVideoConference";
 
 const RESOLUTION_OPTIONS = {
   "480p": { label: "480p", width: 854, height: 480 },
@@ -31,6 +37,10 @@ const RESOLUTION_OPTIONS = {
   "1080p": { label: "1080p", width: 1920, height: 1080 },
 } as const;
 const FRAME_RATE_OPTIONS = [15, 30] as const;
+const CONFERENCE_TRACK_SOURCES = [
+  { source: Track.Source.Camera, withPlaceholder: true },
+  { source: Track.Source.ScreenShare, withPlaceholder: false },
+];
 
 type AudioSource =
   | Track.Source.Microphone
@@ -162,10 +172,35 @@ function VolumeControl({
 export function ConferenceExperience() {
   const participants = useRemoteParticipants();
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
-  const screenShareTracks = useTracks([Track.Source.ScreenShare], {
-    onlySubscribed: false,
-  });
-  const activeScreenShare = screenShareTracks.find(isTrackReference);
+  const layoutContext = useCreateLayoutContext();
+  const conferenceTracks = useTracks(
+    CONFERENCE_TRACK_SOURCES,
+    {
+      updateOnlyOn: [RoomEvent.ActiveSpeakersChanged],
+      onlySubscribed: false,
+    },
+  );
+  const screenShareTracks = useMemo(
+    () =>
+      conferenceTracks
+        .filter(isTrackReference)
+        .filter(
+          (track) => track.publication.source === Track.Source.ScreenShare,
+        ),
+    [conferenceTracks],
+  );
+  const focusTrack = usePinnedTracks(layoutContext)[0];
+  const focusedParticipantScreenShare = focusTrack
+    ? screenShareTracks.find((track) =>
+        focusTrack.source === Track.Source.ScreenShare
+          ? isSameTrackReference(track, focusTrack)
+          : track.participant.identity === focusTrack.participant.identity,
+      )
+    : undefined;
+  const activeScreenShare =
+    focusedParticipantScreenShare ??
+    screenShareTracks.find((track) => track.publication.isSubscribed) ??
+    screenShareTracks[0];
   const hasScreenShare = Boolean(activeScreenShare);
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -426,7 +461,10 @@ export function ConferenceExperience() {
       onFocusCapture={keepControlsVisible}
       onBlurCapture={revealControls}
     >
-      <VideoConference />
+      <SyncedVideoConference
+        tracks={conferenceTracks}
+        layoutContext={layoutContext}
+      />
 
       {isFullscreen && activeScreenShare && (
         <div className="fullscreen-screen-share">

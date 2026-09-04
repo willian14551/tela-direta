@@ -105,6 +105,17 @@ O segredo contém expiração e nonce assinados com HMAC. Isso permite validar o
 mesmo convite em qualquer instância serverless da Vercel sem guardar salas em
 memória. Os convites expiram depois de 24 horas.
 
+## Ciclo de vida das salas
+
+A sala de mídia do LiveKit só é criada quando o primeiro participante entra e,
+por padrão, é encerrada 20 segundos depois que o último sai. Esse pequeno prazo
+permite uma reconexão sem manter áudio, vídeo ou uso contínuo de banda quando a
+sala está vazia.
+
+O convite continua válido por 24 horas. Se alguém usá-lo novamente depois do
+encerramento, o LiveKit cria uma nova sala vazia com o mesmo identificador; a
+sala anterior não permanece rodando.
+
 ## Controles da transmissão
 
 - O menu **Áudio** controla separadamente a voz e o compartilhamento de cada
