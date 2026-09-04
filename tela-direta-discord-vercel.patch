@@ -1,0 +1,960 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..9110b8f
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,19 @@
++# Autenticação Auth.js + Discord
++# Gere com: npm exec auth secret
++AUTH_SECRET=
++AUTH_DISCORD_ID=
++AUTH_DISCORD_SECRET=
++DISCORD_GUILD_ID=
++
++# Opcional. Se ficar vazio, os convites usam AUTH_SECRET para assinatura.
++# Gere com: openssl rand -base64 32
++ROOM_SIGNING_SECRET=
++
++# LiveKit Cloud (a URL começa com wss://)
++LIVEKIT_URL=
++LIVEKIT_API_KEY=
++LIVEKIT_API_SECRET=
++
++# Necessário somente se o bot da pasta discord-bot estiver em uso.
++# Use o mesmo valor no site da Vercel e no processo do bot.
++TELADIRETA_BOT_SECRET=
+diff --git a/README.md b/README.md
+index 6656176..c2abe37 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,120 @@
+-# tela-direta
+\ No newline at end of file
++# Tela Direta
++
++Aplicação Next.js para criar salas privadas de compartilhamento de tela com
++LiveKit. O acesso ao site é permitido somente para contas que pertencem a um
++servidor específico do Discord.
++
++## O que roda onde
++
++- **Vercel:** site Next.js, login do Discord, criação dos convites e emissão de
++  tokens do LiveKit.
++- **LiveKit Cloud:** áudio, vídeo e compartilhamento de tela em tempo real.
++- **Hospedagem com processo contínuo:** bot da pasta `discord-bot`.
++
++O bot atual usa o Gateway do Discord e mantém uma conexão contínua com
++`client.login()`. Ele não deve ser hospedado como uma Function da Vercel. Use
++um serviço que mantenha um processo Node ativo, como Render, Railway, Fly.io ou
++uma VPS. O site continua funcionando na Vercel mesmo sem o bot.
++
++## 1. Configurar o aplicativo no Discord
++
++1. Abra o [Discord Developer Portal](https://discord.com/developers/applications)
++   e selecione a aplicação usada pelo projeto.
++2. Em **OAuth2 > Redirects**, cadastre exatamente:
++   - desenvolvimento: `http://localhost:3000/api/auth/callback/discord`
++   - produção: `https://SEU-DOMINIO.vercel.app/api/auth/callback/discord`
++3. Copie o **Application ID** e o **Client Secret** da aplicação.
++4. No Discord, ative o modo desenvolvedor, clique com o botão direito no
++   servidor permitido e use **Copiar ID do servidor**.
++
++Não use a URL temporária de cada preview como redirect do Discord. Para o fluxo
++mais simples, teste o OAuth no domínio estável de produção da Vercel.
++
++## 2. Variáveis do site
++
++Copie `.env.example` para `.env.local` no desenvolvimento. Na Vercel, adicione
++as mesmas chaves em **Project > Settings > Environment Variables**:
++
++| Variável                | Obrigatória | Conteúdo                                                   |
++| ----------------------- | ----------- | ---------------------------------------------------------- |
++| `AUTH_SECRET`           | Sim         | Segredo aleatório com pelo menos 32 caracteres             |
++| `AUTH_DISCORD_ID`       | Sim         | Application ID do Discord                                  |
++| `AUTH_DISCORD_SECRET`   | Sim         | Client Secret do Discord                                   |
++| `DISCORD_GUILD_ID`      | Sim         | ID numérico do servidor permitido                          |
++| `LIVEKIT_URL`           | Sim         | URL `wss://...` do projeto LiveKit                         |
++| `LIVEKIT_API_KEY`       | Sim         | API Key do LiveKit                                         |
++| `LIVEKIT_API_SECRET`    | Sim         | API Secret do LiveKit                                      |
++| `ROOM_SIGNING_SECRET`   | Não         | Chave separada para convites; usa `AUTH_SECRET` se ausente |
++| `TELADIRETA_BOT_SECRET` | Só com bot  | Mesmo segredo configurado no processo do bot               |
++
++Gere `AUTH_SECRET` com:
++
++```bash
++npm exec auth secret
++```
++
++Depois de criar ou alterar variáveis na Vercel, faça um novo deployment. Nunca
++adicione segredos a variáveis com prefixo `NEXT_PUBLIC_`.
++
++## 3. Executar o site localmente
++
++```bash
++npm install
++npm run dev
++```
++
++Acesse `http://localhost:3000`. O login solicita os escopos `identify` e
++`guilds`. Depois do OAuth, o servidor consulta a API do Discord com o access
++token e confirma se `DISCORD_GUILD_ID` está entre os servidores daquela conta.
++
++## 4. Publicar o site na Vercel
++
++Ao importar o repositório, deixe **Root Directory** na raiz do projeto, onde
++fica o `package.json` principal. Não selecione a pasta `discord-bot`.
++
++Confira antes do deploy:
++
++- o redirect cadastrado no Discord é idêntico ao domínio de produção;
++- `AUTH_DISCORD_ID` e `AUTH_DISCORD_SECRET` pertencem à mesma aplicação;
++- `DISCORD_GUILD_ID` é o ID do servidor, não o ID de um canal;
++- todas as variáveis obrigatórias estão habilitadas para **Production**;
++- o bot e o site usam o mesmo `TELADIRETA_BOT_SECRET`, quando aplicável.
++
++## 5. Executar o bot
++
++Na hospedagem escolhida para processos contínuos:
++
++```bash
++cd discord-bot
++npm install
++npm start
++```
++
++Use `discord-bot/.env.example` como referência. `TELADIRETA_URL` deve apontar
++para o domínio de produção do site, e `TELADIRETA_BOT_SECRET` deve ser uma
++string aleatória de pelo menos 32 caracteres.
++
++## Segurança dos convites
++
++O convite tem o formato `/room/ID#s=SEGREDO`. O fragmento depois de `#` não é
++enviado automaticamente em requisições HTTP nem em cabeçalhos de referência.
++Durante o OAuth ele fica apenas no `sessionStorage` da aba. Para entrar, o
++navegador o envia explicitamente por HTTPS ao endpoint de token.
++
++O segredo contém expiração e nonce assinados com HMAC. Isso permite validar o
++mesmo convite em qualquer instância serverless da Vercel sem guardar salas em
++memória. Os convites expiram depois de 24 horas.
++
++## Erros comuns
++
++- **`NextAuth is not callable`:** havia um arquivo `next-auth.d.ts` na raiz
++  sombreando o pacote. As declarações agora ficam em `types/next-auth.d.ts`.
++- **`OAuthSignin` / `OAuthCallbackError`:** Client ID, Client Secret ou redirect
++  do Discord não correspondem ao deployment aberto.
++- **`AccessDenied`:** a conta não pertence ao servidor configurado ou o
++  `DISCORD_GUILD_ID` está errado.
++- **`DiscordVerificationFailed`:** o Discord não devolveu o escopo `guilds`, a
++  API do Discord falhou ou a configuração do servidor está ausente.
++- **`MissingSecret`:** `AUTH_SECRET` não foi configurado na Vercel.
++- **`Link inválido ou expirado`:** convite expirado, assinatura alterada ou
++  `ROOM_SIGNING_SECRET`/`AUTH_SECRET` foi trocado depois da criação do link.
+diff --git a/app/api/auth/[...nextauth]/route.ts b/app/api/auth/[...nextauth]/route.ts
+index fc5a3af..63bbe62 100644
+--- a/app/api/auth/[...nextauth]/route.ts
++++ b/app/api/auth/[...nextauth]/route.ts
+@@ -1,3 +1,5 @@
+ import { handlers } from "@/lib/auth";
+ 
+-export const { GET, POST } = handlers;
+\ No newline at end of file
++export const runtime = "nodejs";
++
++export const { GET, POST } = handlers;
+diff --git a/app/api/rooms/bot/route.ts b/app/api/rooms/bot/route.ts
+index af386a9..300bf98 100644
+--- a/app/api/rooms/bot/route.ts
++++ b/app/api/rooms/bot/route.ts
+@@ -1,26 +1,43 @@
+ import { NextRequest, NextResponse } from "next/server";
+ import { createRoom } from "@/lib/rooms";
++import { timingSafeEqual } from "crypto";
++
++export const runtime = "nodejs";
++
++function secretsMatch(received: string | null, expected: string): boolean {
++  if (!received?.startsWith("Bearer ")) return false;
++
++  const receivedSecret = Buffer.from(received.slice(7), "utf8");
++  const expectedSecret = Buffer.from(expected, "utf8");
++
++  if (receivedSecret.length !== expectedSecret.length) return false;
++  return timingSafeEqual(receivedSecret, expectedSecret);
++}
+ 
+ export async function POST(req: NextRequest) {
+   const expectedSecret = process.env.TELADIRETA_BOT_SECRET;
+ 
+-  if (!expectedSecret) {
++  if (!expectedSecret || expectedSecret.length < 32) {
+     return NextResponse.json(
+       { error: "Endpoint de bot desativado" },
+-      { status: 503 }
++      { status: 503 },
+     );
+   }
+ 
+   const auth = req.headers.get("authorization");
+ 
+-  if (auth !== `Bearer ${expectedSecret}`) {
++  if (!secretsMatch(auth, expectedSecret)) {
++    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
++  }
++
++  try {
++    const { roomId, secret } = createRoom();
++    return NextResponse.json({ roomId, secret });
++  } catch (error) {
++    console.error("[rooms/bot] Falha ao criar sala:", error);
+     return NextResponse.json(
+-      { error: "Não autorizado" },
+-      { status: 401 }
++      { error: "Configuração do servidor incompleta" },
++      { status: 500 },
+     );
+   }
+-
+-  const { roomId, secret } = createRoom();
+-
+-  return NextResponse.json({ roomId, secret });
+-}
+\ No newline at end of file
++}
+diff --git a/app/api/rooms/route.ts b/app/api/rooms/route.ts
+index 1354891..8856c03 100644
+--- a/app/api/rooms/route.ts
++++ b/app/api/rooms/route.ts
+@@ -1,10 +1,26 @@
+ import { NextResponse } from "next/server";
+ import { createRoom } from "@/lib/rooms";
++import { auth } from "@/lib/auth";
++
++export const runtime = "nodejs";
+ 
+ export async function POST() {
+-  const { roomId, secret } = createRoom();
+-  // O "secret" só é devolvido nesta resposta, uma única vez.
+-  // O cliente coloca ele no fragmento do link (#s=...) e nunca mais
+-  // ele passa por uma requisição GET ou por logs do servidor.
+-  return NextResponse.json({ roomId, secret });
++  const session = await auth();
++
++  if (!session?.user?.discordId) {
++    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
++  }
++
++  try {
++    const { roomId, secret } = createRoom();
++    // O "secret" só é devolvido nesta resposta. O cliente o coloca no
++    // fragmento (#s=...), que não aparece em requisições GET nem em logs HTTP.
++    return NextResponse.json({ roomId, secret });
++  } catch (error) {
++    console.error("[rooms] Falha ao criar sala:", error);
++    return NextResponse.json(
++      { error: "Configuração do servidor incompleta" },
++      { status: 500 },
++    );
++  }
+ }
+diff --git a/app/api/token/route.ts b/app/api/token/route.ts
+index eb4f6d6..956e937 100644
+--- a/app/api/token/route.ts
++++ b/app/api/token/route.ts
+@@ -1,8 +1,17 @@
+ import { NextRequest, NextResponse } from "next/server";
+ import { verifyRoomSecret } from "@/lib/rooms";
+ import { mintParticipantToken } from "@/lib/livekit";
++import { auth } from "@/lib/auth";
++
++export const runtime = "nodejs";
+ 
+ export async function POST(req: NextRequest) {
++  const session = await auth();
++
++  if (!session?.user?.discordId) {
++    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
++  }
++
+   let body: { roomId?: string; secret?: string; name?: string };
+   try {
+     body = await req.json();
+@@ -12,10 +21,14 @@ export async function POST(req: NextRequest) {
+ 
+   const { roomId, secret, name } = body;
+ 
+-  if (!roomId || !secret || !name) {
++  if (
++    typeof roomId !== "string" ||
++    typeof secret !== "string" ||
++    typeof name !== "string"
++  ) {
+     return NextResponse.json(
+       { error: "roomId, secret e name são obrigatórios" },
+-      { status: 400 }
++      { status: 400 },
+     );
+   }
+ 
+@@ -24,24 +37,25 @@ export async function POST(req: NextRequest) {
+     return NextResponse.json({ error: "Nome inválido" }, { status: 400 });
+   }
+ 
+-  if (!verifyRoomSecret(roomId, secret)) {
+-    return NextResponse.json(
+-      { error: "Link inválido ou expirado" },
+-      { status: 403 }
+-    );
+-  }
+-
+   try {
++    if (!verifyRoomSecret(roomId, secret)) {
++      return NextResponse.json(
++        { error: "Link inválido ou expirado" },
++        { status: 403 },
++      );
++    }
++
+     const { token, livekitUrl } = await mintParticipantToken(
+       roomId,
+-      trimmedName
++      trimmedName,
++      session.user.discordId,
+     );
+     return NextResponse.json({ token, livekitUrl });
+   } catch (err) {
+-    console.error(err);
++    console.error("[token] Falha ao gerar credencial:", err);
+     return NextResponse.json(
+       { error: "Falha ao gerar credencial de acesso" },
+-      { status: 500 }
++      { status: 500 },
+     );
+   }
+ }
+diff --git a/app/auth/error/page.tsx b/app/auth/error/page.tsx
+index 0173ae2..465d3a9 100644
+--- a/app/auth/error/page.tsx
++++ b/app/auth/error/page.tsx
+@@ -12,7 +12,9 @@ function ErrorContent() {
+       <p className="lede" style={{ textAlign: "center", marginBottom: 20 }}>
+         {error === "AccessDenied"
+           ? "Você não tem permissão para acessar este site. Apenas membros do servidor do Discord podem entrar."
+-          : "Ocorreu um erro ao fazer login. Tente novamente."}
++          : error === "DiscordVerificationFailed"
++            ? "Não foi possível confirmar sua participação no servidor do Discord. Tente entrar novamente."
++            : "Ocorreu um erro ao fazer login. Tente novamente."}
+       </p>
+       <a href="/" className="btn btn-primary" style={{ textAlign: "center" }}>
+         Voltar para o início
+@@ -32,10 +34,16 @@ export default function AuthError() {
+       </header>
+       <main className="hero">
+         <h1>Erro de autenticação</h1>
+-        <Suspense fallback={<div className="panel"><p>Carregando...</p></div>}>
++        <Suspense
++          fallback={
++            <div className="panel">
++              <p>Carregando...</p>
++            </div>
++          }
++        >
+           <ErrorContent />
+         </Suspense>
+       </main>
+     </div>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/app/auth/signin/page.tsx b/app/auth/signin/page.tsx
+index 3a5905e..006bfb0 100644
+--- a/app/auth/signin/page.tsx
++++ b/app/auth/signin/page.tsx
+@@ -13,7 +13,7 @@ function SignInForm() {
+     <div className="panel">
+       <button
+         className="btn btn-primary"
+-        onClick={() => signIn("discord", { callbackUrl })}
++        onClick={() => signIn("discord", { redirectTo: callbackUrl })}
+       >
+         Entrar com Discord
+       </button>
+@@ -21,12 +21,14 @@ function SignInForm() {
+         <p className="error-text">
+           {error === "AccessDenied"
+             ? "Você não é membro do servidor autorizado."
+-            : "Erro ao fazer login. Tente novamente."}
++            : error === "DiscordVerificationFailed"
++              ? "Não foi possível confirmar seu servidor no Discord. Tente novamente em instantes."
++              : "Erro ao fazer login. Tente novamente."}
+         </p>
+       )}
+       <p className="hint">
+-        <strong>Importante:</strong> você precisa estar no servidor do
+-        Discord para conseguir entrar. Se não for membro, peça um convite.
++        <strong>Importante:</strong> você precisa estar no servidor do Discord
++        para conseguir entrar. Se não for membro, peça um convite.
+       </p>
+     </div>
+   );
+@@ -44,13 +46,19 @@ export default function SignInPage() {
+       <main className="hero">
+         <h1>Acesso restrito</h1>
+         <p className="lede">
+-          Este site é exclusivo para membros do servidor do Discord.
+-          Faça login para continuar.
++          Este site é exclusivo para membros do servidor do Discord. Faça login
++          para continuar.
+         </p>
+-        <Suspense fallback={<div className="panel"><p>Carregando...</p></div>}>
++        <Suspense
++          fallback={
++            <div className="panel">
++              <p>Carregando...</p>
++            </div>
++          }
++        >
+           <SignInForm />
+         </Suspense>
+       </main>
+     </div>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/app/page.tsx b/app/page.tsx
+index 8a27355..0349d4e 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -87,7 +87,7 @@ export default function HomePage() {
+               </p>
+               <button
+                 className="btn btn-primary"
+-                onClick={() => signIn("discord")}
++                onClick={() => signIn("discord", { redirectTo: "/" })}
+               >
+                 Entrar com Discord
+               </button>
+@@ -123,7 +123,10 @@ export default function HomePage() {
+                   }}
+                 />
+               </div>
+-              <button className="btn btn-secondary" onClick={handleJoinFromLink}>
++              <button
++                className="btn btn-secondary"
++                onClick={handleJoinFromLink}
++              >
+                 Entrar na sala
+               </button>
+               {error && <p className="error-text">{error}</p>}
+@@ -140,4 +143,4 @@ export default function HomePage() {
+       </main>
+     </div>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/app/room/[roomId]/RoomClient.tsx b/app/room/[roomId]/RoomClient.tsx
+index a3ef760..7ecbac0 100644
+--- a/app/room/[roomId]/RoomClient.tsx
++++ b/app/room/[roomId]/RoomClient.tsx
+@@ -1,7 +1,11 @@
+ "use client";
+ import { useEffect, useState } from "react";
+ import { useSession } from "next-auth/react";
+-import { LiveKitRoom, VideoConference, RoomAudioRenderer } from "@livekit/components-react";
++import {
++  LiveKitRoom,
++  VideoConference,
++  RoomAudioRenderer,
++} from "@livekit/components-react";
+ 
+ type ConnInfo = { token: string; livekitUrl: string };
+ 
+@@ -15,10 +19,28 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+   const [copied, setCopied] = useState(false);
+ 
+   useEffect(() => {
+-    const hash = window.location.hash;
+-    const match = hash.match(/[#&]s=([^&]+)/);
+-    setSecret(match ? decodeURIComponent(match[1]) : "");
+-  }, []);
++    const storageKey = `tela-direta:room:${roomId}:secret`;
++    const hashParams = new URLSearchParams(window.location.hash.slice(1));
++    const secretFromLink = hashParams.get("s");
++
++    if (secretFromLink) {
++      // sessionStorage mantém o segredo somente nesta aba durante o OAuth.
++      // Assim ele não precisa virar um parâmetro de query enviado ao servidor.
++      sessionStorage.setItem(storageKey, secretFromLink);
++      setSecret(secretFromLink);
++      return;
++    }
++
++    const storedSecret = sessionStorage.getItem(storageKey) || "";
++    setSecret(storedSecret);
++
++    if (storedSecret) {
++      const restoredUrl = `${window.location.pathname}${window.location.search}#s=${encodeURIComponent(
++        storedSecret,
++      )}`;
++      window.history.replaceState(null, "", restoredUrl);
++    }
++  }, [roomId]);
+ 
+   async function handleJoin() {
+     setError(null);
+@@ -29,7 +51,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+     }
+     if (!secret) {
+       setError(
+-        "Esse link está incompleto. Peça para quem te convidou reenviar o link inteiro."
++        "Esse link está incompleto. Peça para quem te convidou reenviar o link inteiro.",
+       );
+       return;
+     }
+@@ -85,7 +107,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+             </p>
+             <a
+               href={`/auth/signin?callbackUrl=${encodeURIComponent(
+-                window.location.href
++                `/room/${roomId}`,
+               )}`}
+               className="btn btn-primary"
+             >
+@@ -129,7 +151,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+           <button
+             className="btn btn-secondary copy-btn"
+             onClick={handleCopyInvite}
+-            disabled={secret === null}
++            disabled={!secret}
+           >
+             {copied ? "Link copiado!" : "Copiar convite"}
+           </button>
+@@ -139,7 +161,8 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+         <div className="panel">
+           <h2 style={{ margin: 0, fontSize: 20 }}>Entrar na sala</h2>
+           <p className="status-line">
+-            Olá, {session.user?.name || "usuário"}! Digite como quer ser visto na sala.
++            Olá, {session.user?.name || "usuário"}! Digite como quer ser visto
++            na sala.
+           </p>
+           <div className="field">
+             <label htmlFor="name">Seu nome</label>
+@@ -167,4 +190,4 @@ export default function RoomClient({ roomId }: { roomId: string }) {
+       </div>
+     </div>
+   );
+-}
+\ No newline at end of file
++}
+diff --git a/discord-bot/.env.example b/discord-bot/.env.example
+new file mode 100644
+index 0000000..8cc10a5
+--- /dev/null
++++ b/discord-bot/.env.example
+@@ -0,0 +1,8 @@
++DISCORD_TOKEN=
++DISCORD_CLIENT_ID=
++DISCORD_GUILD_ID=
++TELADIRETA_URL=https://seu-dominio.vercel.app
++TELADIRETA_BOT_SECRET=
++
++# Opcional: limita o comando a um cargo específico.
++ALLOWED_ROLE_ID=
+diff --git a/lib/auth.ts b/lib/auth.ts
+index 6181e97..70780cd 100644
+--- a/lib/auth.ts
++++ b/lib/auth.ts
+@@ -1,11 +1,17 @@
+ import NextAuth from "next-auth";
+ import Discord from "next-auth/providers/discord";
++import { isDiscordGuildMember } from "@/lib/discord";
+ 
+-const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID!;
++const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
+ 
+ export const { handlers, auth, signIn, signOut } = NextAuth({
+   providers: [
+     Discord({
++      // Auth.js v5 usa AUTH_DISCORD_ID/SECRET. Os nomes antigos continuam
++      // aceitos como fallback para facilitar a migração do projeto.
++      clientId: process.env.AUTH_DISCORD_ID || process.env.DISCORD_CLIENT_ID,
++      clientSecret:
++        process.env.AUTH_DISCORD_SECRET || process.env.DISCORD_CLIENT_SECRET,
+       authorization: {
+         params: {
+           scope: "identify guilds",
+@@ -13,24 +19,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
+       },
+     }),
+   ],
++  session: {
++    strategy: "jwt",
++    // A associação ao servidor é confirmada novamente no próximo login.
++    maxAge: SESSION_MAX_AGE_SECONDS,
++  },
+   callbacks: {
+-    async signIn({ account, profile }) {
+-      if (account?.provider === "discord") {
+-        // Verifica se o usuário está no servidor autorizado
+-        const guilds = (profile as any).guilds || [];
+-        const isMember = guilds.some(
+-          (guild: { id: string }) => guild.id === DISCORD_GUILD_ID
++    async signIn({ account }) {
++      if (account?.provider !== "discord") {
++        return false;
++      }
++
++      const guildId = process.env.DISCORD_GUILD_ID;
++
++      if (!guildId || !account.access_token) {
++        console.error(
++          "[auth] DISCORD_GUILD_ID ausente ou access token não recebido.",
+         );
++        return "/auth/error?error=DiscordVerificationFailed";
++      }
+ 
+-        if (!isMember) {
+-          return false; // Bloqueia o login
+-        }
++      try {
++        return await isDiscordGuildMember(account.access_token, guildId);
++      } catch (error) {
++        console.error("[auth] Falha ao validar o servidor do Discord:", error);
++        return "/auth/error?error=DiscordVerificationFailed";
++      }
++    },
++    async jwt({ token, account }) {
++      if (account?.provider === "discord") {
++        token.discordId = account.providerAccountId;
+       }
+-      return true;
++      return token;
+     },
+     async session({ session, token }) {
+-      if (token.sub && session.user) {
+-        (session.user as any).discordId = token.sub;
++      if (token.discordId && session.user) {
++        session.user.discordId = token.discordId;
+       }
+       return session;
+     },
+@@ -39,4 +63,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
+     signIn: "/auth/signin",
+     error: "/auth/error",
+   },
+-});
+\ No newline at end of file
++});
+diff --git a/lib/discord.ts b/lib/discord.ts
+new file mode 100644
+index 0000000..3219e4d
+--- /dev/null
++++ b/lib/discord.ts
+@@ -0,0 +1,52 @@
++type DiscordGuild = {
++  id?: unknown;
++};
++
++const DISCORD_GUILDS_URL =
++  "https://discord.com/api/v10/users/@me/guilds?limit=200";
++
++/**
++ * Consulta os servidores da conta que acabou de autorizar o aplicativo.
++ *
++ * O endpoint de perfil do Discord (/users/@me) não devolve os servidores do
++ * usuário. Mesmo pedindo o escopo `guilds`, essa lista precisa ser consultada
++ * separadamente com o access token recebido no OAuth.
++ */
++export async function isDiscordGuildMember(
++  accessToken: string,
++  guildId: string,
++  fetcher: typeof fetch = fetch,
++): Promise<boolean> {
++  if (!accessToken) {
++    throw new Error("O Discord não devolveu um access token.");
++  }
++
++  if (!/^\d{16,22}$/.test(guildId)) {
++    throw new Error("DISCORD_GUILD_ID não contém um ID válido.");
++  }
++
++  const response = await fetcher(DISCORD_GUILDS_URL, {
++    headers: {
++      Authorization: `Bearer ${accessToken}`,
++    },
++    cache: "no-store",
++    signal: AbortSignal.timeout(8_000),
++  });
++
++  if (!response.ok) {
++    throw new Error(
++      `O Discord recusou a consulta dos servidores (HTTP ${response.status}).`,
++    );
++  }
++
++  const guilds: unknown = await response.json();
++
++  if (!Array.isArray(guilds)) {
++    throw new Error("O Discord devolveu uma resposta inesperada.");
++  }
++
++  return guilds.some(
++    (guild: DiscordGuild) =>
++      typeof guild === "object" && guild !== null && guild.id === guildId,
++  );
++}
+diff --git a/lib/livekit.ts b/lib/livekit.ts
+index cc44ee1..fb1d178 100644
+--- a/lib/livekit.ts
++++ b/lib/livekit.ts
+@@ -1,4 +1,5 @@
+ import { AccessToken } from "livekit-server-sdk";
++import { randomUUID } from "crypto";
+ 
+ const TOKEN_TTL_S = 4 * 60 * 60; // credencial de acesso expira em 4h
+ 
+@@ -6,7 +7,7 @@ function getEnv(name: string): string {
+   const value = process.env[name];
+   if (!value) {
+     throw new Error(
+-      `Variável de ambiente ${name} não configurada. Veja o .env.example.`
++      `Variável de ambiente ${name} não configurada. Veja o .env.example.`,
+     );
+   }
+   return value;
+@@ -19,15 +20,16 @@ function getEnv(name: string): string {
+  */
+ export async function mintParticipantToken(
+   roomId: string,
+-  participantName: string
++  participantName: string,
++  discordId: string,
+ ): Promise<{ token: string; livekitUrl: string }> {
+   const apiKey = getEnv("LIVEKIT_API_KEY");
+   const apiSecret = getEnv("LIVEKIT_API_SECRET");
+   const livekitUrl = getEnv("LIVEKIT_URL");
+ 
+-  const identity = `${participantName.slice(0, 40)}-${Math.random()
+-    .toString(36)
+-    .slice(2, 8)}`;
++  // A identidade técnica usa o ID validado pelo Discord. O nome escolhido
++  // continua sendo apenas o nome visível dentro da sala.
++  const identity = `discord-${discordId}-${randomParticipantSuffix()}`;
+ 
+   const at = new AccessToken(apiKey, apiSecret, {
+     identity,
+@@ -53,3 +55,7 @@ export async function mintParticipantToken(
+   const token = await at.toJwt();
+   return { token, livekitUrl };
+ }
++
++function randomParticipantSuffix(): string {
++  return randomUUID().slice(0, 8);
++}
+diff --git a/lib/rooms.ts b/lib/rooms.ts
+index 75b5827..1a265e6 100644
+--- a/lib/rooms.ts
++++ b/lib/rooms.ts
+@@ -1,68 +1,91 @@
+-import { randomBytes, createHash, timingSafeEqual } from "crypto";
++import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+ 
+ /**
+- * Guarda de salas.
++ * Convites de sala sem estado persistente.
+  *
+- * MVP: fica em memória do processo Node. Isso é suficiente para um único
+- * servidor rodando, mas some se o processo reiniciar e não funciona com
+- * múltiplas instâncias. Para produção real, troque este Map por Redis
+- * (ex: Upstash) ou um banco de dados, mantendo a mesma interface.
++ * A Vercel pode atender duas requisições em instâncias diferentes. Por isso,
++ * guardar as salas num Map em memória faz um convite recém-criado aparecer
++ * como inexistente. O segredo abaixo contém validade e nonce, assinados com
++ * HMAC; qualquer instância consegue validá-lo sem banco e ninguém consegue
++ * alterar seus dados sem conhecer a chave do servidor.
+  */
+ 
+-type RoomRecord = {
+-  roomId: string;
+-  secretHash: string; // sha256(secret), nunca guardamos o segredo em texto puro
+-  createdAt: number;
+-  expiresAt: number;
+-};
+-
+ const ROOM_TTL_MS = 24 * 60 * 60 * 1000; // sala "convite" válida por 24h
++const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
++const SECRET_VERSION = "v1";
++const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]{8}$/;
++const EXPIRATION_PATTERN = /^[0-9a-z]+$/;
++const NONCE_PATTERN = /^[A-Za-z0-9_-]{22}$/;
++const SIGNATURE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
++
++function getSigningSecret(): string {
++  const secret =
++    process.env.ROOM_SIGNING_SECRET?.trim() || process.env.AUTH_SECRET?.trim();
++
++  if (!secret || secret.length < 32) {
++    throw new Error(
++      "Configure ROOM_SIGNING_SECRET ou AUTH_SECRET com pelo menos 32 caracteres.",
++    );
++  }
++
++  return secret;
++}
+ 
+-const rooms = new Map<string, RoomRecord>();
++function signInvite(roomId: string, expiration: string, nonce: string): string {
++  const payload = `${SECRET_VERSION}.${roomId}.${expiration}.${nonce}`;
+ 
+-function hashSecret(secret: string): string {
+-  return createHash("sha256").update(secret).digest("hex");
++  return createHmac("sha256", getSigningSecret())
++    .update(payload)
++    .digest("base64url");
+ }
+ 
+ export function createRoom(): { roomId: string; secret: string } {
+   // roomId: identificador curto e não sequencial (não precisa ser secreto).
+   const roomId = randomBytes(6).toString("base64url");
+-  // secret: a "chave" real de acesso, vai só no fragmento do link (#s=...),
+-  // que o navegador nunca envia ao servidor automaticamente.
+-  const secret = randomBytes(24).toString("base64url");
+-
+-  const now = Date.now();
+-  rooms.set(roomId, {
+-    roomId,
+-    secretHash: hashSecret(secret),
+-    createdAt: now,
+-    expiresAt: now + ROOM_TTL_MS,
+-  });
++  const expiration = (Date.now() + ROOM_TTL_MS).toString(36);
++  const nonce = randomBytes(16).toString("base64url");
++  const signature = signInvite(roomId, expiration, nonce);
++  // O segredo vai no fragmento (#s=...), que o navegador não envia em GET.
++  const secret = `${SECRET_VERSION}.${expiration}.${nonce}.${signature}`;
+ 
+   return { roomId, secret };
+ }
+ 
+ export function verifyRoomSecret(roomId: string, secret: string): boolean {
+-  const record = rooms.get(roomId);
+-  if (!record) return false;
+-  if (Date.now() > record.expiresAt) {
+-    rooms.delete(roomId);
++  if (!ROOM_ID_PATTERN.test(roomId) || secret.length > 160) {
+     return false;
+   }
+ 
+-  const given = Buffer.from(hashSecret(secret));
+-  const expected = Buffer.from(record.secretHash);
+-  if (given.length !== expected.length) return false;
++  const parts = secret.split(".");
++  if (parts.length !== 4) return false;
+ 
+-  return timingSafeEqual(given, expected);
+-}
++  const [version, expiration, nonce, givenSignature] = parts;
+ 
+-export function roomExists(roomId: string): boolean {
+-  const record = rooms.get(roomId);
+-  if (!record) return false;
+-  if (Date.now() > record.expiresAt) {
+-    rooms.delete(roomId);
++  if (
++    version !== SECRET_VERSION ||
++    !EXPIRATION_PATTERN.test(expiration) ||
++    !NONCE_PATTERN.test(nonce) ||
++    !SIGNATURE_PATTERN.test(givenSignature)
++  ) {
+     return false;
+   }
+-  return true;
++
++  const expiresAt = Number.parseInt(expiration, 36);
++  const now = Date.now();
++
++  if (
++    !Number.isSafeInteger(expiresAt) ||
++    expiresAt <= now ||
++    expiresAt > now + ROOM_TTL_MS + MAX_CLOCK_SKEW_MS
++  ) {
++    return false;
++  }
++
++  const expectedSignature = signInvite(roomId, expiration, nonce);
++  const given = Buffer.from(givenSignature, "utf8");
++  const expected = Buffer.from(expectedSignature, "utf8");
++
++  if (given.length !== expected.length) return false;
++
++  return timingSafeEqual(given, expected);
+ }
+diff --git a/middleware.ts b/middleware.ts
+deleted file mode 100644
+index b689fb5..0000000
+--- a/middleware.ts
++++ /dev/null
+@@ -1,22 +0,0 @@
+-import { auth } from "@/lib/auth";
+-import { NextResponse } from "next/server";
+-
+-export default auth((req) => {
+-  const isRoomRoute = req.nextUrl.pathname.startsWith("/room/");
+-  const isTokenRoute = req.nextUrl.pathname === "/api/token";
+-
+-  if (isRoomRoute || isTokenRoute) {
+-    if (!req.auth) {
+-      // Redireciona para login
+-      const loginUrl = new URL("/auth/signin", req.url);
+-      loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+-      return NextResponse.redirect(loginUrl);
+-    }
+-  }
+-
+-  return NextResponse.next();
+-});
+-
+-export const config = {
+-  matcher: ["/room/:path*", "/api/token"],
+-};
+\ No newline at end of file
+diff --git a/next-auth.d.ts b/next-auth.d.ts
+deleted file mode 100644
+index 22e095d..0000000
+--- a/next-auth.d.ts
++++ /dev/null
+@@ -1,9 +0,0 @@
+-import { DefaultSession } from "next-auth";
+-
+-declare module "next-auth" {
+-  interface Session {
+-    user: {
+-      discordId?: string;
+-    } & DefaultSession["user"];
+-  }
+-}
+\ No newline at end of file
+diff --git a/types/next-auth.d.ts b/types/next-auth.d.ts
+new file mode 100644
+index 0000000..c5b3335
+--- /dev/null
++++ b/types/next-auth.d.ts
+@@ -0,0 +1,15 @@
++import type { DefaultSession } from "next-auth";
++
++declare module "next-auth" {
++  interface Session {
++    user: {
++      discordId?: string;
++    } & DefaultSession["user"];
++  }
++}
++
++declare module "@auth/core/jwt" {
++  interface JWT {
++    discordId?: string;
++  }
++}

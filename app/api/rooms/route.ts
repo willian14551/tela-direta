@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server";
 import { createRoom } from "@/lib/rooms";
+import { auth } from "@/lib/auth";
+
+export const runtime = "nodejs";
 
 export async function POST() {
-  const { roomId, secret } = createRoom();
-  // O "secret" só é devolvido nesta resposta, uma única vez.
-  // O cliente coloca ele no fragmento do link (#s=...) e nunca mais
-  // ele passa por uma requisição GET ou por logs do servidor.
-  return NextResponse.json({ roomId, secret });
+  const session = await auth();
+
+  if (!session?.user?.discordId) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  try {
+    const { roomId, secret } = createRoom();
+    // O "secret" só é devolvido nesta resposta. O cliente o coloca no
+    // fragmento (#s=...), que não aparece em requisições GET nem em logs HTTP.
+    return NextResponse.json({ roomId, secret });
+  } catch (error) {
+    console.error("[rooms] Falha ao criar sala:", error);
+    return NextResponse.json(
+      { error: "Configuração do servidor incompleta" },
+      { status: 500 },
+    );
+  }
 }

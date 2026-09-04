@@ -12,7 +12,9 @@ function ErrorContent() {
       <p className="lede" style={{ textAlign: "center", marginBottom: 20 }}>
         {error === "AccessDenied"
           ? "Você não tem permissão para acessar este site. Apenas membros do servidor do Discord podem entrar."
-          : "Ocorreu um erro ao fazer login. Tente novamente."}
+          : error === "DiscordVerificationFailed"
+            ? "Não foi possível confirmar sua participação no servidor do Discord. Tente entrar novamente."
+            : "Ocorreu um erro ao fazer login. Tente novamente."}
       </p>
       <a href="/" className="btn btn-primary" style={{ textAlign: "center" }}>
         Voltar para o início
@@ -32,7 +34,13 @@ export default function AuthError() {
       </header>
       <main className="hero">
         <h1>Erro de autenticação</h1>
-        <Suspense fallback={<div className="panel"><p>Carregando...</p></div>}>
+        <Suspense
+          fallback={
+            <div className="panel">
+              <p>Carregando...</p>
+            </div>
+          }
+        >
           <ErrorContent />
         </Suspense>
       </main>

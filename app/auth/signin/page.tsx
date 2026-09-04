@@ -13,7 +13,7 @@ function SignInForm() {
     <div className="panel">
       <button
         className="btn btn-primary"
-        onClick={() => signIn("discord", { callbackUrl })}
+        onClick={() => signIn("discord", { redirectTo: callbackUrl })}
       >
         Entrar com Discord
       </button>
@@ -21,12 +21,14 @@ function SignInForm() {
         <p className="error-text">
           {error === "AccessDenied"
             ? "Você não é membro do servidor autorizado."
-            : "Erro ao fazer login. Tente novamente."}
+            : error === "DiscordVerificationFailed"
+              ? "Não foi possível confirmar seu servidor no Discord. Tente novamente em instantes."
+              : "Erro ao fazer login. Tente novamente."}
         </p>
       )}
       <p className="hint">
-        <strong>Importante:</strong> você precisa estar no servidor do
-        Discord para conseguir entrar. Se não for membro, peça um convite.
+        <strong>Importante:</strong> você precisa estar no servidor do Discord
+        para conseguir entrar. Se não for membro, peça um convite.
       </p>
     </div>
   );
@@ -44,10 +46,16 @@ export default function SignInPage() {
       <main className="hero">
         <h1>Acesso restrito</h1>
         <p className="lede">
-          Este site é exclusivo para membros do servidor do Discord.
-          Faça login para continuar.
+          Este site é exclusivo para membros do servidor do Discord. Faça login
+          para continuar.
         </p>
-        <Suspense fallback={<div className="panel"><p>Carregando...</p></div>}>
+        <Suspense
+          fallback={
+            <div className="panel">
+              <p>Carregando...</p>
+            </div>
+          }
+        >
           <SignInForm />
         </Suspense>
       </main>

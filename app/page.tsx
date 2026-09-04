@@ -87,7 +87,7 @@ export default function HomePage() {
               </p>
               <button
                 className="btn btn-primary"
-                onClick={() => signIn("discord")}
+                onClick={() => signIn("discord", { redirectTo: "/" })}
               >
                 Entrar com Discord
               </button>
@@ -123,7 +123,10 @@ export default function HomePage() {
                   }}
                 />
               </div>
-              <button className="btn btn-secondary" onClick={handleJoinFromLink}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleJoinFromLink}
+              >
                 Entrar na sala
               </button>
               {error && <p className="error-text">{error}</p>}

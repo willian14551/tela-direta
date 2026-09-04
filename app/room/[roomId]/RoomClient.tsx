@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { LiveKitRoom, VideoConference, RoomAudioRenderer } from "@livekit/components-react";
+import {
+  LiveKitRoom,
+  VideoConference,
+  RoomAudioRenderer,
+} from "@livekit/components-react";
 
 type ConnInfo = { token: string; livekitUrl: string };
 
@@ -15,10 +19,28 @@ export default function RoomClient({ roomId }: { roomId: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    const match = hash.match(/[#&]s=([^&]+)/);
-    setSecret(match ? decodeURIComponent(match[1]) : "");
-  }, []);
+    const storageKey = `tela-direta:room:${roomId}:secret`;
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const secretFromLink = hashParams.get("s");
+
+    if (secretFromLink) {
+      // sessionStorage mantém o segredo somente nesta aba durante o OAuth.
+      // Assim ele não precisa virar um parâmetro de query enviado ao servidor.
+      sessionStorage.setItem(storageKey, secretFromLink);
+      setSecret(secretFromLink);
+      return;
+    }
+
+    const storedSecret = sessionStorage.getItem(storageKey) || "";
+    setSecret(storedSecret);
+
+    if (storedSecret) {
+      const restoredUrl = `${window.location.pathname}${window.location.search}#s=${encodeURIComponent(
+        storedSecret,
+      )}`;
+      window.history.replaceState(null, "", restoredUrl);
+    }
+  }, [roomId]);
 
   async function handleJoin() {
     setError(null);
@@ -29,7 +51,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
     }
     if (!secret) {
       setError(
-        "Esse link está incompleto. Peça para quem te convidou reenviar o link inteiro."
+        "Esse link está incompleto. Peça para quem te convidou reenviar o link inteiro.",
       );
       return;
     }
@@ -85,7 +107,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
             </p>
             <a
               href={`/auth/signin?callbackUrl=${encodeURIComponent(
-                window.location.href
+                `/room/${roomId}`,
               )}`}
               className="btn btn-primary"
             >
@@ -129,7 +151,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
           <button
             className="btn btn-secondary copy-btn"
             onClick={handleCopyInvite}
-            disabled={secret === null}
+            disabled={!secret}
           >
             {copied ? "Link copiado!" : "Copiar convite"}
           </button>
@@ -139,7 +161,8 @@ export default function RoomClient({ roomId }: { roomId: string }) {
         <div className="panel">
           <h2 style={{ margin: 0, fontSize: 20 }}>Entrar na sala</h2>
           <p className="status-line">
-            Olá, {session.user?.name || "usuário"}! Digite como quer ser visto na sala.
+            Olá, {session.user?.name || "usuário"}! Digite como quer ser visto
+            na sala.
           </p>
           <div className="field">
             <label htmlFor="name">Seu nome</label>

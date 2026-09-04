@@ -1,4 +1,5 @@
 import { AccessToken } from "livekit-server-sdk";
+import { randomUUID } from "crypto";
 
 const TOKEN_TTL_S = 4 * 60 * 60; // credencial de acesso expira em 4h
 
@@ -6,7 +7,7 @@ function getEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
     throw new Error(
-      `Variável de ambiente ${name} não configurada. Veja o .env.example.`
+      `Variável de ambiente ${name} não configurada. Veja o .env.example.`,
     );
   }
   return value;
@@ -19,15 +20,16 @@ function getEnv(name: string): string {
  */
 export async function mintParticipantToken(
   roomId: string,
-  participantName: string
+  participantName: string,
+  discordId: string,
 ): Promise<{ token: string; livekitUrl: string }> {
   const apiKey = getEnv("LIVEKIT_API_KEY");
   const apiSecret = getEnv("LIVEKIT_API_SECRET");
   const livekitUrl = getEnv("LIVEKIT_URL");
 
-  const identity = `${participantName.slice(0, 40)}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  // A identidade técnica usa o ID validado pelo Discord. O nome escolhido
+  // continua sendo apenas o nome visível dentro da sala.
+  const identity = `discord-${discordId}-${randomParticipantSuffix()}`;
 
   const at = new AccessToken(apiKey, apiSecret, {
     identity,
@@ -52,4 +54,8 @@ export async function mintParticipantToken(
 
   const token = await at.toJwt();
   return { token, livekitUrl };
+}
+
+function randomParticipantSuffix(): string {
+  return randomUUID().slice(0, 8);
 }
