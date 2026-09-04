@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   CarouselLayout,
   Chat,
@@ -44,9 +50,11 @@ export function isSameTrackReference(
 export function SyncedVideoConference({
   tracks,
   layoutContext,
+  additionalControls,
 }: {
   tracks: TrackReferenceOrPlaceholder[];
   layoutContext: LayoutContextType;
+  additionalControls?: ReactNode;
 }) {
   const [widgetState, setWidgetState] = useState<WidgetState>({
     showChat: false,
@@ -168,7 +176,10 @@ export function SyncedVideoConference({
               </FocusLayoutContainer>
             </div>
           )}
-          <ControlBar controls={{ chat: true }} />
+          <div className="conference-controls-dock">
+            <ControlBar controls={{ chat: true }} />
+            {additionalControls}
+          </div>
         </div>
         <Chat style={{ display: widgetState.showChat ? "grid" : "none" }} />
       </LayoutContextProvider>

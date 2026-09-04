@@ -451,6 +451,75 @@ export function ConferenceExperience() {
     .filter(Boolean)
     .join(" ");
 
+  const transmissionControls = (
+    <div className="conference-tools" aria-label="Controles da transmissão">
+      <TrackToggle
+        source={Track.Source.ScreenShare}
+        captureOptions={screenCaptureOptions}
+        publishOptions={SCREEN_SHARE_PUBLISH_OPTIONS}
+        className={`conference-tool-button conference-share-button${
+          isScreenShareEnabled ? " is-sharing" : ""
+        }`}
+        onDeviceError={() =>
+          setScreenShareError(
+            "Não foi possível iniciar o compartilhamento. Confira a permissão do navegador.",
+          )
+        }
+        onChange={(enabled) => {
+          if (enabled) setScreenShareError(null);
+        }}
+        title={
+          isScreenShareEnabled
+            ? "Parar compartilhamento"
+            : "Compartilhar tela"
+        }
+      >
+        <span>{isScreenShareEnabled ? "Parar" : "Compartilhar"}</span>
+      </TrackToggle>
+
+      <button
+        type="button"
+        className={`conference-tool-button${openPanel === "audio" ? " is-active" : ""}`}
+        onClick={() => togglePanel("audio")}
+        aria-expanded={openPanel === "audio"}
+        aria-controls="audio-mixer"
+        title="Volumes individuais"
+      >
+        <MixerIcon />
+        <span>Áudio</span>
+      </button>
+
+      <button
+        type="button"
+        className={`conference-tool-button${openPanel === "quality" ? " is-active" : ""}`}
+        onClick={() => togglePanel("quality")}
+        aria-expanded={openPanel === "quality"}
+        aria-controls="quality-settings"
+        title="Qualidade da transmissão"
+      >
+        <QualityIcon />
+        <span>Qualidade</span>
+      </button>
+
+      <button
+        type="button"
+        className="conference-tool-button"
+        onClick={toggleFullscreen}
+        disabled={!fullscreenSupported || (!hasScreenShare && !isFullscreen)}
+        title={
+          !hasScreenShare && !isFullscreen
+            ? "Disponível quando houver uma transmissão"
+            : isFullscreen
+              ? "Sair da tela cheia"
+              : "Ver transmissão em tela cheia"
+        }
+      >
+        <FullscreenIcon active={isFullscreen} />
+        <span>{isFullscreen ? "Sair" : "Tela cheia"}</span>
+      </button>
+    </div>
+  );
+
   return (
     <div
       ref={stageRef}
@@ -464,6 +533,7 @@ export function ConferenceExperience() {
       <SyncedVideoConference
         tracks={conferenceTracks}
         layoutContext={layoutContext}
+        additionalControls={transmissionControls}
       />
 
       {isFullscreen && activeScreenShare && (
@@ -474,73 +544,6 @@ export function ConferenceExperience() {
           />
         </div>
       )}
-
-      <div className="conference-tools" aria-label="Controles da transmissão">
-        <TrackToggle
-          source={Track.Source.ScreenShare}
-          captureOptions={screenCaptureOptions}
-          publishOptions={SCREEN_SHARE_PUBLISH_OPTIONS}
-          className={`conference-tool-button conference-share-button${
-            isScreenShareEnabled ? " is-sharing" : ""
-          }`}
-          onDeviceError={() =>
-            setScreenShareError(
-              "Não foi possível iniciar o compartilhamento. Confira a permissão do navegador.",
-            )
-          }
-          onChange={(enabled) => {
-            if (enabled) setScreenShareError(null);
-          }}
-          title={
-            isScreenShareEnabled
-              ? "Parar compartilhamento"
-              : "Compartilhar tela"
-          }
-        >
-          <span>{isScreenShareEnabled ? "Parar" : "Compartilhar"}</span>
-        </TrackToggle>
-
-        <button
-          type="button"
-          className={`conference-tool-button${openPanel === "audio" ? " is-active" : ""}`}
-          onClick={() => togglePanel("audio")}
-          aria-expanded={openPanel === "audio"}
-          aria-controls="audio-mixer"
-          title="Volumes individuais"
-        >
-          <MixerIcon />
-          <span>Áudio</span>
-        </button>
-
-        <button
-          type="button"
-          className={`conference-tool-button${openPanel === "quality" ? " is-active" : ""}`}
-          onClick={() => togglePanel("quality")}
-          aria-expanded={openPanel === "quality"}
-          aria-controls="quality-settings"
-          title="Qualidade da transmissão"
-        >
-          <QualityIcon />
-          <span>Qualidade</span>
-        </button>
-
-        <button
-          type="button"
-          className="conference-tool-button"
-          onClick={toggleFullscreen}
-          disabled={!fullscreenSupported || (!hasScreenShare && !isFullscreen)}
-          title={
-            !hasScreenShare && !isFullscreen
-              ? "Disponível quando houver uma transmissão"
-              : isFullscreen
-                ? "Sair da tela cheia"
-                : "Ver transmissão em tela cheia"
-          }
-        >
-          <FullscreenIcon active={isFullscreen} />
-          <span>{isFullscreen ? "Sair" : "Tela cheia"}</span>
-        </button>
-      </div>
 
       {openPanel === "audio" && (
         <aside

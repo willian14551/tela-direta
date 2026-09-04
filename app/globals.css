@@ -951,6 +951,13 @@ button {
   height: 100%;
 }
 
+/* Mantém a barra dentro da área de vídeo. Quando o chat abre, essa área
+   encolhe e os controles continuam centralizados sem avançar sobre a conversa. */
+.conference-stage .lk-video-conference-inner {
+  position: relative;
+  min-width: 0;
+}
+
 /* O compartilhamento usa o botão configurável abaixo, não o botão padrão. */
 .conference-stage .lk-control-bar [data-lk-source="screen_share"] {
   display: none;
@@ -961,25 +968,40 @@ button {
   height: 100%;
 }
 
-.conference-stage.has-screen-share .lk-control-bar {
+.conference-controls-dock {
   position: absolute;
-  z-index: 18;
+  z-index: 20;
   right: 0;
   bottom: 0;
   left: 0;
-  border-top: 0;
-  background: linear-gradient(to top, rgba(8, 9, 24, 0.98), transparent);
+  min-height: var(--lk-control-bar-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--lk-border-color);
+  background: var(--lk-bg);
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
+.conference-stage.has-screen-share .conference-controls-dock {
+  border-top: 0;
+  background: linear-gradient(to top, rgba(8, 9, 24, 0.98), transparent);
+}
+
+.conference-controls-dock .lk-control-bar {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .conference-tools {
-  position: absolute;
-  z-index: 20;
-  right: max(14px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
+  flex: 0 0 auto;
   display: flex;
   gap: 8px;
-  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
 .conference-tool-button {
@@ -1045,8 +1067,7 @@ button {
   cursor: none;
 }
 
-.conference-stage.has-screen-share.controls-hidden .conference-tools,
-.conference-stage.has-screen-share.controls-hidden .lk-control-bar {
+.conference-stage.has-screen-share.controls-hidden .conference-controls-dock {
   opacity: 0;
   pointer-events: none;
   transform: translateY(12px);
@@ -1061,8 +1082,8 @@ button {
   cursor: auto;
 }
 
-.conference-stage.has-screen-share.controls-hidden:focus-within .conference-tools,
-.conference-stage.has-screen-share.controls-hidden:focus-within .lk-control-bar {
+.conference-stage.has-screen-share.controls-hidden:focus-within
+  .conference-controls-dock {
   opacity: 1;
   pointer-events: auto;
   transform: none;
@@ -1417,12 +1438,11 @@ button {
 }
 
 @media (max-width: 640px) {
-  .conference-tools {
-    bottom: max(76px, calc(env(safe-area-inset-bottom) + 68px));
-  }
-
-  .conference-stage.is-screen-fullscreen .conference-tools {
-    bottom: max(14px, env(safe-area-inset-bottom));
+  .conference-controls-dock {
+    gap: 6px;
+    padding: 8px max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
   }
 
   .audio-mixer {
