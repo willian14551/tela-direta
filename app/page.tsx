@@ -66,7 +66,12 @@ export default function HomePage() {
           Tela Direta
         </div>
         {session && (
-          <div style={{ marginLeft: "auto" }}>
+          <div className="top-bar-actions">
+            {session.user?.isAdmin && (
+              <a className="btn btn-secondary" href="/admin">
+                Painel
+              </a>
+            )}
             <button className="btn btn-secondary" onClick={() => signOut()}>
               Sair
             </button>

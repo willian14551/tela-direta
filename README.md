@@ -41,6 +41,7 @@ as mesmas chaves em **Project > Settings > Environment Variables**:
 | `AUTH_DISCORD_ID`       | Sim         | Application ID do Discord                                  |
 | `AUTH_DISCORD_SECRET`   | Sim         | Client Secret do Discord                                   |
 | `DISCORD_GUILD_ID`      | Sim         | ID numérico do servidor permitido                          |
+| `ADMIN_DISCORD_IDS`     | Só painel   | IDs Discord autorizados no `/admin`, separados por vírgula |
 | `LIVEKIT_URL`           | Sim         | URL `wss://...` do projeto LiveKit                         |
 | `LIVEKIT_API_KEY`       | Sim         | API Key do LiveKit                                         |
 | `LIVEKIT_API_SECRET`    | Sim         | API Secret do LiveKit                                      |
@@ -55,6 +56,14 @@ npm exec auth secret
 
 Depois de criar ou alterar variáveis na Vercel, faça um novo deployment. Nunca
 adicione segredos a variáveis com prefixo `NEXT_PUBLIC_`.
+
+Para obter seu ID, ative o **Modo desenvolvedor** no Discord, clique com o
+botão direito no seu próprio perfil e selecione **Copiar ID do usuário**. Um
+exemplo com dois administradores seria:
+
+```env
+ADMIN_DISCORD_IDS=123456789012345678,987654321098765432
+```
 
 ## 3. Executar o site localmente
 
@@ -115,6 +124,18 @@ sala está vazia.
 O convite continua válido por 24 horas. Se alguém usá-lo novamente depois do
 encerramento, o LiveKit cria uma nova sala vazia com o mesmo identificador; a
 sala anterior não permanece rodando.
+
+## Painel administrativo
+
+Administradores configurados em `ADMIN_DISCORD_IDS` podem abrir `/admin` para
+acompanhar as salas ativas, quem está conectado e quais mídias cada pessoa está
+publicando. A consulta ocorre somente no servidor e é atualizada a cada cinco
+segundos enquanto o painel estiver aberto; a chave secreta do LiveKit nunca é
+enviada ao navegador.
+
+O painel mostra a identidade autenticada pelo Discord separadamente do nome que
+a pessoa escolheu para usar na sala. Participantes conectados antes desta versão
+podem não exibir nome e avatar verificados até entrarem novamente.
 
 ## Controles da transmissão
 

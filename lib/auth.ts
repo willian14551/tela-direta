@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
+import { isAdminDiscordId } from "@/lib/admin";
 import { isDiscordGuildMember } from "@/lib/discord";
 
 const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
@@ -55,6 +56,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.discordId && session.user) {
         session.user.discordId = token.discordId;
+        session.user.isAdmin = isAdminDiscordId(token.discordId);
       }
       return session;
     },

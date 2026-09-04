@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
       roomId,
       trimmedName,
       session.user.discordId,
+      session.user.name,
+      session.user.image,
     );
     return NextResponse.json({ token, livekitUrl });
   } catch (err) {
