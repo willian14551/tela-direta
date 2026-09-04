@@ -1,0 +1,45 @@
+"use client";
+import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+
+export default function SignIn() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const error = searchParams.get("error");
+
+  return (
+    <div className="page">
+      <header className="top-bar">
+        <div className="brand">
+          <span className="brand-dot" aria-hidden="true" />
+          Tela Direta
+        </div>
+      </header>
+      <main className="hero">
+        <h1>Acesso restrito</h1>
+        <p className="lede">
+          Este site é exclusivo para membros do servidor do Discord.
+          Faça login para continuar.
+        </p>
+        <div className="panel">
+          <button
+            className="btn btn-primary"
+            onClick={() => signIn("discord", { callbackUrl })}
+          >
+            Entrar com Discord
+          </button>
+          {error && (
+            <p className="error-text">
+              {error === "AccessDenied"
+                ? "Você não é membro do servidor autorizado."
+                : "Erro ao fazer login. Tente novamente."}
+          )}
+          <p className="hint">
+            <strong>Importante:</strong> você precisa estar no servidor do
+            Discord para conseguir entrar. Se não for membro, peça um convite.
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}

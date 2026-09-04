@@ -1,11 +1,12 @@
 "use client";
-
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from "@livekit/components-react";
 
 type ConnInfo = { token: string; livekitUrl: string };
 
 export default function RoomClient({ roomId }: { roomId: string }) {
+  const { data: session, status } = useSession();
   const [secret, setSecret] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
@@ -13,8 +14,6 @@ export default function RoomClient({ roomId }: { roomId: string }) {
   const [conn, setConn] = useState<ConnInfo | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // O segredo vive só no fragmento do link (#s=...), então só existe
-  // no navegador — nunca é enviado numa requisição GET comum.
   useEffect(() => {
     const hash = window.location.hash;
     const match = hash.match(/[#&]s=([^&]+)/);
@@ -34,7 +33,6 @@ export default function RoomClient({ roomId }: { roomId: string }) {
       );
       return;
     }
-
     setJoining(true);
     try {
       const res = await fetch("/api/token", {
@@ -60,8 +58,43 @@ export default function RoomClient({ roomId }: { roomId: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // silencioso: navegador pode bloquear clipboard fora de HTTPS/localhost
+      // silencioso
     }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="room-shell">
+        <div className="join-screen">
+          <div className="panel">
+            <p>Carregando...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="room-shell">
+        <div className="join-screen">
+          <div className="panel">
+            <h2>Acesso restrito</h2>
+            <p className="status-line">
+              Você precisa fazer login com Discord para entrar nesta sala.
+            </p>
+            <a
+              href={`/auth/signin?callbackUrl=${encodeURIComponent(
+                window.location.href
+              )}`}
+              className="btn btn-primary"
+            >
+              Entrar com Discord
+            </a>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (conn) {
@@ -102,15 +135,12 @@ export default function RoomClient({ roomId }: { roomId: string }) {
           </button>
         </div>
       </header>
-
       <div className="join-screen">
         <div className="panel">
           <h2 style={{ margin: 0, fontSize: 20 }}>Entrar na sala</h2>
           <p className="status-line">
-            Ninguém foi avisado ainda — assim que você entrar, poderá
-            compartilhar sua tela ou ver a de outra pessoa.
+            Olá, {session.user?.name || "usuário"}! Digite como quer ser visto na sala.
           </p>
-
           <div className="field">
             <label htmlFor="name">Seu nome</label>
             <input
@@ -125,7 +155,6 @@ export default function RoomClient({ roomId }: { roomId: string }) {
               }}
             />
           </div>
-
           <button
             className="btn btn-primary"
             onClick={handleJoin}
@@ -133,7 +162,6 @@ export default function RoomClient({ roomId }: { roomId: string }) {
           >
             {joining ? "Entrando…" : "Entrar"}
           </button>
-
           {error && <p className="error-text">{error}</p>}
         </div>
       </div>
