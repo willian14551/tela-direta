@@ -53,6 +53,12 @@ type SafeDisplayMediaStreamOptions = DisplayMediaStreamOptions & {
   systemAudio?: "include" | "exclude";
   windowAudio?: "system" | "window" | "exclude";
 };
+type ChromiumNavigator = Navigator & {
+  brave?: { isBrave?: () => Promise<boolean> };
+  userAgentData?: {
+    brands?: Array<{ brand: string; version: string }>;
+  };
+};
 
 type SafariFullscreenElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -83,11 +89,19 @@ function getVolumeKey(participant: RemoteParticipant, source: AudioSource) {
 }
 
 function supportsIsolatedWindowAudio() {
-  const chromiumVersion = navigator.userAgent.match(
-    /(?:Chrome|Chromium|Edg)\/(\d+)/,
+  const chromiumNavigator = navigator as ChromiumNavigator;
+  const brandVersion = chromiumNavigator.userAgentData?.brands?.find(
+    ({ brand }) =>
+      /Chromium|Google Chrome|Microsoft Edge|Brave/i.test(brand),
+  )?.version;
+  const userAgentVersion = navigator.userAgent.match(
+    /(?:Chrome|Chromium|CriOS|Edg|Brave)\/(\d+)/,
   )?.[1];
+  const chromiumVersion = Number(brandVersion ?? userAgentVersion ?? 0);
 
-  return Boolean(chromiumVersion && Number(chromiumVersion) >= 141);
+  // O Brave pode ocultar sua marca ou reduzir a versão exposta para evitar
+  // fingerprinting, mas disponibiliza a API oficial `navigator.brave`.
+  return Boolean(chromiumNavigator.brave) || chromiumVersion >= 141;
 }
 
 function SpeakerIcon({ muted }: { muted: boolean }) {
@@ -219,7 +233,7 @@ export function ConferenceExperience() {
   const stageRef = useRef<HTMLDivElement>(null);
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const screenAudioRemovalInProgress = useRef(false);
-  const isolatedWindowAudioTrackIds = useRef(new Set<string>());
+  const isolatedWindowCaptureActive = useRef(false);
   const lastAudibleVolumes = useRef<Record<string, number>>({});
   const [volumes, setVolumes] = useState<Record<string, number>>({});
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
@@ -295,6 +309,18 @@ export function ConferenceExperience() {
     setControlsVisible(true);
   }, [clearHideControlsTimer]);
 
+  // O TrackToggle observa a identidade deste callback. Mantê-lo estável evita
+  // que uma atualização de status dispare `enabled: false` novamente enquanto
+  // a captura ainda está sendo publicada e apague sua validação de áudio.
+  const handleScreenShareChange = useCallback((enabled: boolean) => {
+    if (enabled) {
+      setScreenShareError(null);
+    } else {
+      isolatedWindowCaptureActive.current = false;
+      setScreenShareStatus(null);
+    }
+  }, []);
+
   useEffect(() => {
     revealControls();
     return clearHideControlsTimer;
@@ -322,6 +348,7 @@ export function ConferenceExperience() {
     const secureGetDisplayMedia: typeof mediaDevices.getDisplayMedia = async (
       options = {},
     ) => {
+      isolatedWindowCaptureActive.current = false;
       const secureOptions: SafeDisplayMediaStreamOptions = {
         ...options,
         // Tela inteira pode compartilhar todo o áudio, conforme escolhido pelo
@@ -338,18 +365,13 @@ export function ConferenceExperience() {
       const displaySurface = videoTrack?.getSettings().displaySurface;
       const isolatedWindowAudio =
         displaySurface === "window" && supportsIsolatedWindowAudio();
+      isolatedWindowCaptureActive.current = isolatedWindowAudio;
       const safeAudioSource =
         displaySurface === "monitor" ||
         displaySurface === "browser" ||
         isolatedWindowAudio;
 
       if (safeAudioSource) {
-        if (isolatedWindowAudio) {
-          audioTracks.forEach((track) =>
-            isolatedWindowAudioTrackIds.current.add(track.id),
-          );
-        }
-
         if (audioTracks.length > 0) {
           setScreenShareStatus(
             displaySurface === "browser"
@@ -420,12 +442,11 @@ export function ConferenceExperience() {
       const audioTrack = audioPublication?.track;
       if (!audioTrack) return;
 
-      const audioMediaTrack = audioTrack.mediaStreamTrack;
       const safeAudioSource =
         displaySurface === "monitor" ||
         displaySurface === "browser" ||
         (displaySurface === "window" &&
-          isolatedWindowAudioTrackIds.current.has(audioMediaTrack.id));
+          isolatedWindowCaptureActive.current);
       if (safeAudioSource) return;
 
       if (!disposed) {
@@ -442,7 +463,6 @@ export function ConferenceExperience() {
       try {
         await localParticipant.unpublishTrack(audioTrack);
       } finally {
-        isolatedWindowAudioTrackIds.current.delete(audioMediaTrack.id);
         audioTrack.stop();
         screenAudioRemovalInProgress.current = false;
       }
@@ -661,14 +681,7 @@ export function ConferenceExperience() {
             "Não foi possível iniciar o compartilhamento. Confira a permissão do navegador.",
           )
         }
-        onChange={(enabled) => {
-          if (enabled) {
-            setScreenShareError(null);
-          } else {
-            isolatedWindowAudioTrackIds.current.clear();
-            setScreenShareStatus(null);
-          }
-        }}
+        onChange={handleScreenShareChange}
         title={
           isScreenShareEnabled
             ? "Parar compartilhamento"
@@ -920,10 +933,11 @@ export function ConferenceExperience() {
               }`}
             >
               <strong>Proteção contra vazamento:</strong> a tela inteira pode
-              enviar todo o áudio do computador. No Chrome ou Edge 141+, uma
-              janela solicita somente o próprio som; em navegadores sem esse
-              isolamento, o áudio da janela é bloqueado automaticamente. Uma
-              aba também compartilha apenas o próprio áudio.
+              enviar todo o áudio do computador. No Brave atual, Chrome ou
+              Edge 141+, uma janela solicita somente o próprio som; em
+              navegadores sem esse isolamento, o áudio da janela é bloqueado
+              automaticamente. Uma aba também compartilha apenas o próprio
+              áudio.
               {echoProtectionSupported === false &&
                 " Este navegador também não oferece o filtro do áudio reproduzido pelo próprio Tela Direta; use fones de ouvido."}
             </p>

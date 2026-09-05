@@ -147,10 +147,10 @@ podem não exibir nome e avatar verificados até entrarem novamente.
   após alguns segundos sem movimento e reaparecem ao mover o mouse ou tocar na
   tela.
 - Ao compartilhar a tela inteira, o usuário pode enviar todo o áudio do
-  computador. Ao escolher uma janela no Chrome ou Edge 141+, o app solicita
-  `windowAudio: "window"` para capturar somente o som dela. Em navegadores que
-  não garantem esse isolamento, o áudio de janelas é removido antes de chegar
-  ao LiveKit; abas ainda compartilham apenas o próprio áudio.
+  computador. Ao escolher uma janela no Brave atual, Chrome ou Edge 141+, o
+  app solicita `windowAudio: "window"` para capturar somente o som dela. Em
+  navegadores que não garantem esse isolamento, o áudio de janelas é removido
+  antes de chegar ao LiveKit; abas ainda compartilham apenas o próprio áudio.
 
 ## Erros comuns
 
